@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { House } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 const BottomNavBar = () => {
   const router = useRouter();
+  const pathname = usePathname();
+
   const [activeTab, setActiveTab] = useState("Home");
 
   const tabs = [
@@ -19,6 +21,13 @@ const BottomNavBar = () => {
     },
     { name: "Account", icon: "person-outline", activeIcon: "person-outline" },
   ] as const;
+
+  useEffect(() => {
+    if (pathname.includes("/todo")) setActiveTab("To do list");
+    else if (pathname.includes("/group")) setActiveTab("Group");
+    else if (pathname.includes("/account")) setActiveTab("Account");
+    else setActiveTab("Home");
+  }, [pathname]);
 
   return (
     <View style={styles.navWrapper}>

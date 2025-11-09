@@ -1,9 +1,18 @@
+import RewardCard from "@/components/home/Card";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import { useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function Home() {
+  const router = useRouter();
   const [task, setTask] = useState([
     {
       name: "KOMGRAF",
@@ -51,74 +60,118 @@ export default function Home() {
       <View style={styles.card}>
         <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
 
-        <View style={styles.cardInner}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>My Tasks Today</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewMore}>view more</Text>
-            </TouchableOpacity>
-          </View>
-
+        {/* SCROLLVIEW DI SINI - bungkus semua konten */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 20, gap: 24 }}
+        >
+          {/* Section My Tasks Today */}
           <View>
-            {/* ini ganti semua div jadi View + return di map */}
-            {task.map((t, i) => (
-              <View
-                key={i}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginTop: 8,
-                }}
-              >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>My Tasks Today</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/todo")}>
+                <Text style={styles.viewMore}>view more</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: 12 }}>
+              {task.map((t, i) => (
                 <View
-                  style={{
-                    height: 20,
-                    width: 20,
-                    borderRadius: 20,
-                    backgroundColor: "#fff",
-                    borderWidth: 1,
-                    borderColor: "#000",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: 10,
-                  }}
-                >
-                  {t.completed ? (
-                    <Ionicons
-                      name="checkmark-sharp"
-                      size={15}
-                      color="#09ff00ff"
-                    />
-                  ) : null}
-                </View>
-                <View
+                  key={i}
                   style={{
                     flexDirection: "row",
-                    justifyContent: "space-between",
-                    width: "90%",
+                    alignItems: "center",
+                    marginTop: 8,
                   }}
                 >
-                  <Text>{t.name}</Text>
+                  <View
+                    style={{
+                      height: 20,
+                      width: 20,
+                      borderRadius: 20,
+                      backgroundColor: "#fff",
+                      borderWidth: 1,
+                      borderColor: "#000",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 10,
+                    }}
+                  >
+                    {t.completed ? (
+                      <Ionicons
+                        name="checkmark-sharp"
+                        size={15}
+                        color="#09ff00ff"
+                      />
+                    ) : null}
+                  </View>
                   <View
                     style={{
                       flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
+                      justifyContent: "space-between",
+                      width: "90%",
                     }}
                   >
-                    <Ionicons
-                      name={t.group === "Private" ? "person" : "people"}
-                      size={18}
-                      color="#000"
-                    />
-                    <Text>{t.group}</Text>
+                    <Text>{t.name}</Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <Ionicons
+                        name={t.group === "Private" ? "person" : "people"}
+                        size={18}
+                        color="#000"
+                      />
+                      <Text>{t.group}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
+
+          {/* Section My Projects - jarak diatur oleh gap: 24 di contentContainerStyle */}
+          <View
+            style={{
+              marginBottom: 20,
+            }}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>My Projects</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/group")}>
+                <Text style={styles.viewMore}>view more</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ marginTop: 12 }}>
+              {project.map((t, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginTop: 8,
+                  }}
+                >
+                  <RewardCard data={t} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
       </View>
+      {/* Tombol Plus - Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          // Tambahkan aksi saat tombol ditekan
+          console.log("Plus button pressed");
+        }}
+      >
+        <Ionicons name="add" size={32} color="#000" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -139,12 +192,12 @@ const styles = StyleSheet.create({
   teamText: {
     color: "#A2B06E",
     fontSize: 32,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
   questText: {
     color: "#C8733B",
     fontSize: 32,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
   card: {
     width: "100%",
@@ -177,5 +230,21 @@ const styles = StyleSheet.create({
     color: "#C8733B",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  fab: {
+    position: "absolute",
+    bottom: 20, // sesuaikan dengan tinggi bottom nav bar
+    right: 20,
+    width: 70,
+    height: 70,
+    borderRadius: 40,
+    backgroundColor: "#F3E4BD",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 8, // untuk Android
   },
 });
