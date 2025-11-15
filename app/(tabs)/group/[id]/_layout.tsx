@@ -1,6 +1,11 @@
-import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import ProjectScreen from './projects/project'; // Import your project screen
+import ChatScreen from './chat/chat'; // Import your chat screen
+
+const Tab = createMaterialTopTabNavigator();
 
 // Mock data
 const TEAMS_DATA = [
@@ -60,36 +65,36 @@ export default function GroupDetailLayout() {
                 </View>
             </View>
 
-            {/* Tabs */}
-            <Tabs
+            {/* Material Top Tabs */}
+            <Tab.Navigator
                 screenOptions={{
-                    headerShown: false,
                     tabBarStyle: styles.tabBar,
                     tabBarActiveTintColor: '#C8733B',
                     tabBarInactiveTintColor: '#999',
                     tabBarLabelStyle: styles.tabBarLabel,
                     tabBarIndicatorStyle: styles.tabBarIndicator,
+                    tabBarShowIcon: true,
                 }}
             >
-                <Tabs.Screen
-                    name="project"
+                <Tab.Screen
+                    name="Projects"
+                    component={ProjectScreen}
                     options={{
-                        title: 'Projects',
                         tabBarIcon: ({ color }) => (
                             <Ionicons name="folder-outline" size={20} color={color} />
                         ),
                     }}
                 />
-                <Tabs.Screen
-                    name="chat"
+                <Tab.Screen
+                    name="Chat"
+                    component={ChatScreen}
                     options={{
-                        title: 'Chat',
                         tabBarIcon: ({ color }) => (
                             <Ionicons name="chatbubble-outline" size={20} color={color} />
                         ),
                     }}
                 />
-            </Tabs>
+            </Tab.Navigator>
         </View>
     );
 }
