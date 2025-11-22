@@ -1,5 +1,7 @@
-import { Text, View, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, ScrollView, TouchableOpacity, ImageBackground } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import TeamCard from "@/components/group/TeamCard";
 
 interface Team {
@@ -19,25 +21,24 @@ export default function GroupScreen(): JSX.Element {
       title: 'Team Produk UI/UX',
       bgColor: '#5d6d4e',
       members: ['Raka', 'Very', 'Farras'],
-      projects: ['PAPB', 'Frontend App']
+      projects: ['PAPB', 'Ga tau']
     },
     {
       id: 2,
-      title: 'Team Produktif',
+      title: 'Team Produk UI/UX',
       bgColor: '#5c3d2e',
       members: ['Dono', 'Makima', 'Rimuru'],
-      projects: ['Network', 'UI/UX Design']
+      projects: ['PAPB', 'Ga tau']
     },
     {
       id: 3,
-      title: 'Team Produktif',
+      title: 'Team Produk UI/UX',
       bgColor: '#d4a574',
       members: ['Raka', 'Very', 'Farras'],
       projects: ['PAPB', 'Ga tau']
     }
   ];
 
-  // ← Fungsi untuk handle klik card
   const handleCardPress = (teamId: number) => {
     router.push(`/group/${teamId}`);
   };
@@ -60,7 +61,7 @@ export default function GroupScreen(): JSX.Element {
             bgColor={team.bgColor}
             members={team.members}
             projects={team.projects}
-            onPress={() => handleCardPress(team.id)} // ← Pass fungsi onPress
+            onPress={() => handleCardPress(team.id)}
           />
         ))}
       </ScrollView>
@@ -69,7 +70,7 @@ export default function GroupScreen(): JSX.Element {
         style={styles.fab}
         onPress={() => router.push('/group/create')}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Ionicons name="add" size={32} color="#000" />
       </TouchableOpacity>
     </View>
   );
@@ -99,24 +100,19 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
+    bottom: 20,
     right: 20,
-    bottom: 100,
     width: 70,
     height: 70,
     borderRadius: 40,
-    backgroundColor: '#d4c4a0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
+    backgroundColor: "#F3E4BD",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  fabText: {
-    fontSize: 32,
-    color: '#5c3d2e',
-    fontWeight: '300',
+    shadowRadius: 20,
+    elevation: 8,
   },
 });
