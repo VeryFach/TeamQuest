@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import FAB from "@/components/common/FAB";
 import {
   ScrollView,
   StyleSheet,
@@ -163,15 +164,7 @@ export default function Home() {
         </ScrollView>
       </View>
       {/* Tombol Plus - Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          // Tambahkan aksi saat tombol ditekan
-          console.log("Plus button pressed");
-        }}
-      >
-        <Ionicons name="add" size={32} color="#000" />
-      </TouchableOpacity>
+      <FAB onPress={() => console.log("Plus button pressed")} />
     </View>
   );
 }
@@ -230,21 +223,5 @@ const styles = StyleSheet.create({
     color: "#C8733B",
     fontWeight: "bold",
     fontSize: 14,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 20, // sesuaikan dengan tinggi bottom nav bar
-    right: 20,
-    width: 70,
-    height: 70,
-    borderRadius: 40,
-    backgroundColor: "#F3E4BD",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 8, // untuk Android
   },
 });

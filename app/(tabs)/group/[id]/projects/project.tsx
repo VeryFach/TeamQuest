@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import FAB from "@/components/common/FAB";
 import { useState } from "react";
 
 // Mock data projects dengan warna dan icon
@@ -86,7 +87,7 @@ export default function ProjectTab() {
     };
 
     const handleProjectPress = (projectId: number) => {
-        router.push(`/projects/${id}/${projectId}`);
+        router.push(`/group/${id}/projects/${projectId}/[projectId]` as any);
     };
 
     const filteredProjects = projects.filter(project => {
