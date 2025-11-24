@@ -1,62 +1,63 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import FAB from "@/components/common/FAB";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
+import AddProjectModal from "@/components/project/AddProjectModal";
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 // Mock data projects dengan warna dan icon
 const PROJECTS_DATA: Record<number, any[]> = {
     1: [
-        { 
-            id: 1, 
-            name: 'Sprint 14 : Design Checkout Flow', 
+        {
+            id: 1,
+            name: 'Sprint 14 : Design Checkout Flow',
             subtitle: 'Pizza Party!',
             progress: 62.5,
-            tasks: 8, 
+            tasks: 8,
             completed: 5,
             color: '#C8733B',
             emoji: '🍕'
         },
-        { 
-            id: 2, 
-            name: 'Sprint 14 : Design Checkout Flow', 
+        {
+            id: 2,
+            name: 'Sprint 14 : Design Checkout Flow',
             subtitle: 'Pizza Party!',
             progress: 62.5,
-            tasks: 8, 
+            tasks: 8,
             completed: 5,
             color: '#8BC34A',
             emoji: '🍕'
         },
-        { 
-            id: 3, 
-            name: 'Sprint 14 : Design Checkout Flow', 
+        {
+            id: 3,
+            name: 'Sprint 14 : Design Checkout Flow',
             subtitle: 'Pizza Party!',
             progress: 62.5,
-            tasks: 8, 
+            tasks: 8,
             completed: 5,
             color: '#64B5F6',
             emoji: '🍕'
         },
     ],
     2: [
-        { 
-            id: 1, 
-            name: 'Network Project', 
+        {
+            id: 1,
+            name: 'Network Project',
             subtitle: 'Infrastructure',
             progress: 80,
-            tasks: 10, 
+            tasks: 10,
             completed: 8,
             color: '#C8733B',
             emoji: '🌐'
         },
     ],
     3: [
-        { 
-            id: 1, 
-            name: 'PAPB Final', 
+        {
+            id: 1,
+            name: 'PAPB Final',
             subtitle: 'Mobile Dev',
             progress: 100,
-            tasks: 5, 
+            tasks: 5,
             completed: 5,
             color: '#8BC34A',
             emoji: '📱'
@@ -72,7 +73,7 @@ export default function ProjectTab() {
     const [projectName, setProjectName] = useState('');
     const [projectReward, setProjectReward] = useState('');
     const [iconReward, setIconReward] = useState('');
-    const [tasks, setTasks] = useState<Array<{name: string, assignee: string}>>([
+    const [tasks, setTasks] = useState<Array<{ name: string, assignee: string }>>([
         { name: '', assignee: 'Raka' }
     ]);
     const [filterCompleted, setFilterCompleted] = useState(false);
@@ -100,7 +101,7 @@ export default function ProjectTab() {
         <View style={styles.container}>
             {/* Filter Section */}
             <View style={styles.filterContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.filterChip, filterCompleted && styles.filterChipActive]}
                     onPress={() => setFilterCompleted(!filterCompleted)}
                 >
@@ -109,8 +110,8 @@ export default function ProjectTab() {
                     </Text>
                     {filterCompleted && <Ionicons name="close-circle" size={16} color="#C8733B" />}
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                     style={[styles.filterChip, filterPizzaParty && styles.filterChipActive]}
                     onPress={() => setFilterPizzaParty(!filterPizzaParty)}
                 >
@@ -131,19 +132,19 @@ export default function ProjectTab() {
                 showsVerticalScrollIndicator={false}
             >
                 {filteredProjects.map((project) => (
-                    <TouchableOpacity 
-                        key={project.id} 
+                    <TouchableOpacity
+                        key={project.id}
                         style={[styles.projectCard, { backgroundColor: project.color }]}
                         onPress={() => handleProjectPress(project.id)}
                     >
                         <View style={styles.emojiContainer}>
                             <Text style={styles.emoji}>{project.emoji}</Text>
                         </View>
-                        
+
                         <View style={styles.projectContent}>
                             <Text style={styles.projectName}>{project.name}</Text>
                             <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
-                            
+
                             <View style={styles.tasksInfo}>
                                 <Text style={styles.tasksText}>{project.completed}/{project.tasks} Tasks</Text>
                             </View>
@@ -160,109 +161,25 @@ export default function ProjectTab() {
             </ScrollView>
 
             {/* Add Project Button */}
-            <TouchableOpacity 
-                style={styles.fab}
-                onPress={() => setModalVisible(true)}
-            >
-                <Ionicons name="add" size={28} color="#fff" />
-            </TouchableOpacity>
+            <FAB onPress={() => setModalVisible(true)} />
 
             {/* Add Project Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
+            <AddProjectModal
                 visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>ADD PROJECT</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Ionicons name="close" size={24} color="#C8733B" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* Project Name */}
-                            <Text style={styles.label}>Project Name</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter a project name"
-                                value={projectName}
-                                onChangeText={setProjectName}
-                            />
-
-                            {/* Rewards Row */}
-                            <View style={styles.rewardsRow}>
-                                <View style={styles.rewardColumn}>
-                                    <Text style={styles.label}>Project Reward</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Enter a project name"
-                                        value={projectReward}
-                                        onChangeText={setProjectReward}
-                                    />
-                                </View>
-                                <View style={styles.rewardColumn}>
-                                    <Text style={styles.label}>Icon Reward</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Icon only"
-                                        value={iconReward}
-                                        onChangeText={setIconReward}
-                                    />
-                                </View>
-                            </View>
-
-                            {/* Task Section */}
-                            <View style={styles.taskHeader}>
-                                <Text style={styles.label}>Task</Text>
-                                <Text style={styles.label}>Appoint to</Text>
-                            </View>
-
-                            {tasks.map((task, index) => (
-                                <View key={index} style={styles.taskRow}>
-                                    <TextInput
-                                        style={[styles.input, styles.taskInput]}
-                                        placeholder="Enter a task name"
-                                        value={task.name}
-                                        onChangeText={(text) => {
-                                            const newTasks = [...tasks];
-                                            newTasks[index].name = text;
-                                            setTasks(newTasks);
-                                        }}
-                                    />
-                                    <TouchableOpacity style={styles.assigneeButton}>
-                                        <Text style={styles.assigneeText}>{task.assignee}</Text>
-                                        <Ionicons name="chevron-down" size={16} color="#666" />
-                                    </TouchableOpacity>
-                                    {index === 0 ? (
-                                        <TouchableOpacity 
-                                            style={styles.addTaskButton}
-                                            onPress={addTask}
-                                        >
-                                            <Ionicons name="add" size={20} color="#fff" />
-                                        </TouchableOpacity>
-                                    ) : (
-                                        <TouchableOpacity 
-                                            style={styles.removeTaskButton}
-                                            onPress={() => removeTask(index)}
-                                        >
-                                            <Ionicons name="close" size={20} color="#C8733B" />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            ))}
-                        </ScrollView>
-
-                        {/* Submit Button */}
-                        <TouchableOpacity style={styles.submitButton}>
-                            <Ionicons name="checkmark" size={28} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+                onClose={() => setModalVisible(false)}
+                onSubmit={() => {
+                    console.log("Submit project!");
+                    setModalVisible(false);
+                }}
+                projectName={projectName}
+                setProjectName={setProjectName}
+                projectReward={projectReward}
+                setProjectReward={setProjectReward}
+                iconReward={iconReward}
+                setIconReward={setIconReward}
+                tasks={tasks}
+                setTasks={setTasks}
+            />
         </View>
     );
 }
@@ -365,127 +282,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#999',
         marginTop: 16,
-    },
-    fab: {
-        position: 'absolute',
-        right: 20,
-        bottom: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#f4e4c1',
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 6,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        borderWidth: 2,
-        borderColor: '#333',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        padding: 20,
-        width: '90%',
-        maxHeight: '80%',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
-    },
-    input: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
-        fontSize: 14,
-    },
-    rewardsRow: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    rewardColumn: {
-        flex: 1,
-    },
-    taskHeader: {
-        flexDirection: 'row',
-        marginBottom: 8,
-    },
-    taskRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 12,
-    },
-    taskInput: {
-        flex: 1,
-        marginBottom: 0,
-    },
-    assigneeButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        gap: 4,
-        minWidth: 80,
-    },
-    assigneeText: {
-        fontSize: 14,
-        color: '#333',
-    },
-    addTaskButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#333',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    removeTaskButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'transparent',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    submitButton: {
-        position: 'absolute',
-        right: 20,
-        bottom: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#4CAF50',
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 6,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
     },
 });
