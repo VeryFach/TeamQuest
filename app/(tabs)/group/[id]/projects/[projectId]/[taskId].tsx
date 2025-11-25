@@ -1,9 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-// Mock data untuk task detail
 const PROJECT_DETAILS: Record<string, any> = {
     '1_1': {
         id: 1,
@@ -43,9 +42,19 @@ const PROJECT_DETAILS: Record<string, any> = {
 };
 
 export default function ProjectDetails() {
-    const { id, projectId } = useLocalSearchParams();
+    const params = useLocalSearchParams();
     const router = useRouter();
-    const projectKey = `${id}_${projectId}`;
+    
+    console.log('[taskId].tsx - All params received:', params);
+    const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
+    const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+    const taskId = Array.isArray(params.taskId) ? params.taskId[0] : params.taskId;
+    
+    console.log('[taskId].tsx - Group ID:', groupId, 'Project ID:', projectId, 'Task ID:', taskId);
+    
+    // Untuk halaman individual task, kita masih gunakan project data
+    // tapi bisa fokus pada task tertentu jika diperlukan
+    const projectKey = `${groupId}_${projectId}`;
     const project = PROJECT_DETAILS[projectKey];
 
     const [tasks, setTasks] = useState(project?.taskList || []);

@@ -1,9 +1,9 @@
 import FAB from "@/components/common/FAB";
+import AddProjectModal from "@/components/project/AddProjectModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import AddProjectModal from "@/components/project/AddProjectModal";
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 // Mock data projects dengan warna dan icon
 const PROJECTS_DATA: Record<number, any[]> = {
@@ -97,6 +97,11 @@ export default function ProjectTab() {
         return true;
     });
 
+    const handleClearFilters = () => {
+        setFilterCompleted(false);
+        setFilterPizzaParty(false);
+    };
+
     return (
         <View style={styles.container}>
             {/* Filter Section */}
@@ -121,7 +126,10 @@ export default function ProjectTab() {
                     {filterPizzaParty && <Ionicons name="close-circle" size={16} color="#C8733B" />}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.clearFilters}>
+                <TouchableOpacity 
+                    style={styles.clearFilters}
+                    onPress={handleClearFilters}
+                >
                     <Text style={styles.clearFiltersText}>Clear filters</Text>
                 </TouchableOpacity>
             </View>
