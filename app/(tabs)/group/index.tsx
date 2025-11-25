@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import TeamCard from "@/components/group/TeamCard";
+import FAB from "@/components/common/FAB";
 
 interface Team {
   id: number;
@@ -66,12 +67,7 @@ export default function GroupScreen(): JSX.Element {
         ))}
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/group/create')}
-      >
-        <Ionicons name="add" size={32} color="#000" />
-      </TouchableOpacity>
+      <FAB onPress={() => router.push("/group/create")} />
     </View>
   );
 }
@@ -98,21 +94,5 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 120,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    width: 70,
-    height: 70,
-    borderRadius: 40,
-    backgroundColor: "#F3E4BD",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 8,
   },
 });
