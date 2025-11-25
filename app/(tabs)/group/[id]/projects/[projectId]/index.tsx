@@ -1,182 +1,154 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { PROJECTS_DATA } from "../project";
 
-// Mock data untuk task detail
-const PROJECT_DETAILS: Record<string, any> = {
-    '1_1': {
-        id: 1,
-        name: 'Sprint 14 : Design Checkout Flow',
-        subtitle: 'Pizza Party!',
-        tasks: 8,
-        completed: 5,
-        color: '#C8733B',
-        emoji: '🍕',
-        taskList: [
-            { id: 1, name: 'Wireframe User Flow', assignee: 'Raka', completed: true },
-            { id: 2, name: 'Create Interactive Prototype', assignee: 'Very', completed: true },
-            { id: 3, name: 'User Test Round 1', assignee: 'Very', completed: true },
-            { id: 4, name: 'Handoff to Dev', assignee: 'Jonas', completed: true },
-            { id: 5, name: 'Presentation to customer', assignee: 'Raka', completed: true },
-            { id: 6, name: 'Final Review', assignee: 'Very', completed: false },
-            { id: 7, name: 'Documentation', assignee: 'Jonas', completed: false },
-            { id: 8, name: 'Deploy to Production', assignee: 'Raka', completed: false },
-        ]
-    },
-    '1_2': {
-        id: 2,
-        name: 'Sprint 14 : Design Checkout Flow - Different',
-        subtitle: 'Pizza Party!',
-        tasks: 5,
-        completed: 5,
-        color: '#8BC34A',
-        emoji: '🍕',
-        taskList: [
-            { id: 1, name: 'Research Phase', assignee: 'Raka', completed: true },
-            { id: 2, name: 'Design Mockups', assignee: 'Very', completed: true },
-            { id: 3, name: 'Client Feedback', assignee: 'Jonas', completed: true },
-            { id: 4, name: 'Revisions', assignee: 'Raka', completed: true },
-            { id: 5, name: 'Final Approval', assignee: 'Very', completed: true },
-        ]
-    },
-    '1_3': {
-        id: 3,
-        name: 'Sprint 14 : Design Checkout Flow - Third',
-        subtitle: 'Pizza Party!',
-        tasks: 5,
-        completed: 3,
-        color: '#64B5F6',
-        emoji: '🍕',
-        taskList: [
-            { id: 1, name: 'Initialize Project', assignee: 'Raka', completed: true },
-            { id: 2, name: 'Setup Environment', assignee: 'Very', completed: true },
-            { id: 3, name: 'Code Review', assignee: 'Jonas', completed: true },
-            { id: 4, name: 'Testing', assignee: 'Raka', completed: false },
-            { id: 5, name: 'Deployment', assignee: 'Very', completed: false },
-        ]
-    },
-};
-
-export default function ProjectIndex() {
-    const params = useLocalSearchParams();
+export default function ProjectDetailScreen() {
+    const { id, pid } = useLocalSearchParams();
     const router = useRouter();
-    
-    console.log('🔥 [INDEX.TSX] LOADED - All params received:', params);
-    
-    // Parse parameter dengan benar
-    const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
-    const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
-    
-    console.log('🔥 [INDEX.TSX] Group ID:', groupId, 'Project ID:', projectId);
-    console.log('🔥 [INDEX.TSX] Params types - Group ID type:', typeof groupId, 'Project ID type:', typeof projectId);
-    
-    // Generate key untuk mendapatkan data project
-    const projectKey = `${groupId}_${projectId}`;
-    console.log('🔥 [INDEX.TSX] Project Key:', projectKey);
-    console.log('🔥 [INDEX.TSX] Available keys in PROJECT_DETAILS:', Object.keys(PROJECT_DETAILS));
-    const project = PROJECT_DETAILS[projectKey];
-    console.log('🔥 [INDEX.TSX] Found project:', project ? 'YES' : 'NO');
 
-    const [tasks, setTasks] = useState(project?.taskList || []);
+    const project = PROJECTS_DATA[Number(id)]?.find(
+        (p) => p.id === Number(pid)
+    );
 
-    const toggleTask = (taskId: number) => {
-        setTasks(tasks.map(task =>
-            task.id === taskId ? { ...task, completed: !task.completed } : task
-        ));
-    };
-
+    // Handle jika project tidak ditemukan
     if (!project) {
         return (
             <View style={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity
+                <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle-outline" size={64} color="#999" />
+                    <Text style={styles.errorText}>Project not found</Text>
+                    <TouchableOpacity 
                         style={styles.backButton}
                         onPress={() => router.back()}
                     >
-                        <Ionicons name="arrow-back" size={24} color="#333" />
+                        <Text style={styles.backButtonText}>Go Back</Text>
                     </TouchableOpacity>
-                </View>
-                <View style={styles.debugInfo}>
-                    <Text style={styles.errorText}>Project not found</Text>
-                    <Text style={styles.debugText}>Group ID: {groupId}</Text>
-                    <Text style={styles.debugText}>Project ID: {projectId}</Text>
-                    <Text style={styles.debugText}>Project Key: {projectKey}</Text>
-                    <Text style={styles.debugText}>Available Keys: {Object.keys(PROJECT_DETAILS).join(', ')}</Text>
-                    <Text style={styles.debugText}>All Params: {JSON.stringify(params)}</Text>
                 </View>
             </View>
         );
     }
+    
+    // Hitung progress dari tasks yang ada
+    const completedTasks = project.tasks.filter((t: any) => t.completed).length;
+    const totalTasks = project.tasks.length;
+    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
-    const completedCount = tasks.filter(t => t.completed).length;
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case 'high': return '#FF5252';
+            case 'medium': return '#FFA726';
+            case 'low': return '#66BB6A';
+            default: return '#999';
+        }
+    };
+
+    const toggleTaskCompletion = (taskId: number) => {
+        // TODO: Implement dengan state management (Context/Zustand)
+        console.log('Toggle task:', taskId);
+        // Nanti bisa update seperti ini:
+        // updateTaskStatus(groupId, projectId, taskId, !task.completed)
+    };
 
     return (
         <View style={styles.container}>
-            {/* Back Button */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                >
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: project.color }]}>
+                <View style={styles.headerTop}>
+                    <TouchableOpacity onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity>
+                        <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.projectInfo}>
+                    <Text style={styles.emoji}>{project.emoji}</Text>
+                    <Text style={styles.projectName}>{project.name}</Text>
+                    <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
+                    
+                    {/* Progress Bar */}
+                    <View style={styles.progressSection}>
+                        <View style={styles.progressBar}>
+                            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+                        </View>
+                        <Text style={styles.progressText}>
+                            {completedTasks}/{totalTasks} Tasks Completed ({Math.round(progress)}%)
+                        </Text>
+                    </View>
+                </View>
             </View>
 
-            <ScrollView
+            {/* Tasks List */}
+            <ScrollView 
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Project Card */}
-                <View style={[styles.projectCard, { backgroundColor: project.color }]}>
-                    <View style={styles.emojiContainer}>
-                        <Text style={styles.emoji}>{project.emoji}</Text>
+                <Text style={styles.sectionTitle}>Tasks ({totalTasks})</Text>
+
+                {project.tasks.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Ionicons name="checkbox-outline" size={64} color="#ccc" />
+                        <Text style={styles.emptyText}>No tasks yet</Text>
                     </View>
+                ) : (
+                    project.tasks.map((task: any) => (
+                        <View key={task.id} style={styles.taskCard}>
+                            <TouchableOpacity
+                                style={styles.checkbox}
+                                onPress={() => toggleTaskCompletion(task.id)}
+                            >
+                                <Ionicons
+                                    name={task.completed ? "checkmark-circle" : "ellipse-outline"}
+                                    size={28}
+                                    color={task.completed ? "#4CAF50" : "#ccc"}
+                                />
+                            </TouchableOpacity>
 
-                    <View style={styles.projectContent}>
-                        <Text style={styles.projectName}>{project.name}</Text>
-                        <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
-
-                        <View style={styles.tasksInfo}>
-                            <Text style={styles.tasksText}>{completedCount}/{project.tasks} Tasks</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Task List */}
-                <View style={styles.taskList}>
-                    {tasks.map((task) => (
-                        <TouchableOpacity
-                            key={task.id}
-                            style={styles.taskItem}
-                            onPress={() => toggleTask(task.id)}
-                        >
-                            <View style={styles.taskLeft}>
-                                <View style={[
-                                    styles.checkbox,
-                                    task.completed && styles.checkboxChecked
-                                ]}>
-                                    {task.completed && (
-                                        <Ionicons name="checkmark" size={18} color="#fff" />
-                                    )}
-                                </View>
+                            <View style={styles.taskContent}>
                                 <Text style={[
                                     styles.taskName,
                                     task.completed && styles.taskNameCompleted
                                 ]}>
                                     {task.name}
                                 </Text>
+                                
+                                <View style={styles.taskMeta}>
+                                    <View style={[
+                                        styles.priorityBadge,
+                                        { backgroundColor: getPriorityColor(task.priority) }
+                                    ]}>
+                                        <Text style={styles.priorityText}>
+                                            {task.priority.toUpperCase()}
+                                        </Text>
+                                    </View>
+                                    
+                                    <View style={styles.assigneeInfo}>
+                                        <Ionicons name="person-outline" size={14} color="#666" />
+                                        <Text style={styles.assigneeText}>{task.assignee}</Text>
+                                    </View>
+                                    
+                                    <View style={styles.dueDateInfo}>
+                                        <Ionicons name="calendar-outline" size={14} color="#666" />
+                                        <Text style={styles.dueDateText}>{task.dueDate}</Text>
+                                    </View>
+                                </View>
                             </View>
-                            <Text style={styles.assigneeName}>{task.assignee}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+
+                            <TouchableOpacity style={styles.taskOptions}>
+                                <Ionicons name="ellipsis-horizontal" size={20} color="#999" />
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
             </ScrollView>
 
             {/* Add Task Button */}
-            <TouchableOpacity style={styles.fab}>
-                <Ionicons name="add" size={28} color="#fff" />
+            <TouchableOpacity style={styles.addTaskButton}>
+                <Ionicons name="add" size={24} color="#fff" />
+                <Text style={styles.addTaskText}>Add Task</Text>
             </TouchableOpacity>
         </View>
     );
@@ -187,23 +159,81 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f4e4c1',
     },
-    header: {
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 8,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#fff',
+    errorContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        padding: 20,
+    },
+    errorText: {
+        fontSize: 18,
+        color: '#999',
+        marginTop: 16,
+        marginBottom: 24,
+    },
+    backButton: {
+        backgroundColor: '#C8733B',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    backButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    header: {
+        paddingTop: 50,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+    },
+    projectInfo: {
+        alignItems: 'center',
+    },
+    emoji: {
+        fontSize: 60,
+        marginBottom: 12,
+    },
+    projectName: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 4,
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+    projectSubtitle: {
+        fontSize: 16,
+        color: '#fff',
+        opacity: 0.9,
+        marginBottom: 20,
+    },
+    progressSection: {
+        width: '100%',
+        alignItems: 'center',
+    },
+    progressBar: {
+        width: '100%',
+        height: 8,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 4,
+    },
+    progressText: {
+        fontSize: 14,
+        color: '#fff',
+        fontWeight: '600',
     },
     scrollView: {
         flex: 1,
@@ -212,129 +242,109 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingBottom: 100,
     },
-    projectCard: {
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 20,
-        minHeight: 160,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    emojiContainer: {
-        marginBottom: 12,
-    },
-    emoji: {
-        fontSize: 48,
-    },
-    projectContent: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    projectName: {
+    sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 4,
+        color: '#333',
+        marginBottom: 16,
     },
-    projectSubtitle: {
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
         fontSize: 16,
-        color: '#fff',
-        opacity: 0.9,
-        marginBottom: 12,
+        color: '#999',
+        marginTop: 16,
     },
-    tasksInfo: {
-        alignSelf: 'flex-end',
-    },
-    tasksText: {
-        fontSize: 14,
-        color: '#fff',
-        fontWeight: '600',
-    },
-    taskList: {
-        gap: 12,
-    },
-    taskItem: {
+    taskCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         backgroundColor: '#fff',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
+        marginBottom: 12,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    taskLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        gap: 12,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        borderWidth: 2,
-        borderColor: '#ddd',
-        justifyContent: 'center',
-        alignItems: 'center',
+        marginRight: 12,
     },
-    checkboxChecked: {
-        backgroundColor: '#333',
-        borderColor: '#333',
+    taskContent: {
+        flex: 1,
     },
     taskName: {
-        fontSize: 15,
+        fontSize: 16,
+        fontWeight: '600',
         color: '#333',
-        flex: 1,
+        marginBottom: 8,
     },
     taskNameCompleted: {
         textDecorationLine: 'line-through',
         color: '#999',
     },
-    assigneeName: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
+    taskMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'wrap',
     },
-    errorText: {
-        fontSize: 16,
-        color: '#999',
-        textAlign: 'center',
-        marginBottom: 10,
+    priorityBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
     },
-    debugInfo: {
-        padding: 20,
-        backgroundColor: '#fff',
-        margin: 20,
-        borderRadius: 10,
+    priorityText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#fff',
     },
-    debugText: {
+    assigneeInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    assigneeText: {
         fontSize: 12,
         color: '#666',
-        marginBottom: 5,
     },
-    fab: {
-        position: 'absolute',
-        right: 20,
-        bottom: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#f4e4c1',
-        justifyContent: 'center',
+    dueDateInfo: {
+        flexDirection: 'row',
         alignItems: 'center',
-        elevation: 6,
+        gap: 4,
+    },
+    dueDateText: {
+        fontSize: 12,
+        color: '#666',
+    },
+    taskOptions: {
+        padding: 8,
+    },
+    addTaskButton: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#C8733B',
+        paddingVertical: 16,
+        borderRadius: 16,
+        gap: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        borderWidth: 2,
-        borderColor: '#333',
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    addTaskText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#fff',
     },
 });
