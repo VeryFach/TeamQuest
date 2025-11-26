@@ -246,7 +246,7 @@ const CustomProgressBar: React.FC<CustomProgressBarProps> = ({
     return (
       <Image
         source={imageSource}
-        style={imageStyle}
+        style={imageStyle as any}
         accessibilityLabel={imageAlt}
       />
     );

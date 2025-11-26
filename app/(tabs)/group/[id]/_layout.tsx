@@ -41,8 +41,8 @@ export default function GroupDetailLayout() {
         );
     }
 
-    const ProjectsTab = () => <ProjectScreen groupId={id} />;
-    const ChatTab = () => <ChatScreen groupId={id} />;
+    // Pass groupId to screens via initialParams on the Tab.Screen components below
+    // (removed inline wrapper components to avoid JSX prop type errors)
 
     return (
         <View style={styles.container}>
@@ -80,7 +80,8 @@ export default function GroupDetailLayout() {
             >
                 <Tab.Screen
                     name="Projects"
-                    component={ProjectsTab}
+                    component={ProjectScreen}
+                    initialParams={{ groupId: id }}
                     options={{
                         tabBarIcon: ({ color }) => (
                             <Ionicons name="folder-outline" size={20} color={color} />
@@ -89,7 +90,8 @@ export default function GroupDetailLayout() {
                 />
                 <Tab.Screen
                     name="Chat"
-                    component={ChatTab}
+                    component={ChatScreen}
+                    initialParams={{ groupId: id }}
                     options={{
                         tabBarIcon: ({ color }) => (
                             <Ionicons name="chatbubble-outline" size={20} color={color} />
