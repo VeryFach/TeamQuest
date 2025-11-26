@@ -1,66 +1,236 @@
 import FAB from "@/components/common/FAB";
+import AddProjectModal from "@/components/project/AddProjectModal";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import AddProjectModal from "@/components/project/AddProjectModal";
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-// Mock data projects dengan warna dan icon
-const PROJECTS_DATA: Record<number, any[]> = {
+export const PROJECTS_DATA: Record<number, any[]> = {
     1: [
         {
             id: 1,
             name: 'Sprint 14 : Design Checkout Flow',
             subtitle: 'Pizza Party!',
-            progress: 62.5,
-            tasks: 8,
-            completed: 5,
             color: '#C8733B',
-            emoji: '🍕'
+            emoji: '🍕',
+            tasks: [
+                {
+                    id: 1,
+                    name: 'Design wireframe',
+                    assignee: 'Raka',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-15'
+                },
+                {
+                    id: 2,
+                    name: 'Create prototype',
+                    assignee: 'Very',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-16'
+                },
+                {
+                    id: 3,
+                    name: 'User testing',
+                    assignee: 'Farras',
+                    completed: false,
+                    priority: 'medium',
+                    dueDate: '2024-01-18'
+                },
+                {
+                    id: 4,
+                    name: 'Final revision',
+                    assignee: 'Raka',
+                    completed: false,
+                    priority: 'low',
+                    dueDate: '2024-01-20'
+                },
+                {
+                    id: 5,
+                    name: 'Deploy to production',
+                    assignee: 'Very',
+                    completed: false,
+                    priority: 'high',
+                    dueDate: '2024-01-22'
+                },
+                {
+                    id: 6,
+                    name: 'Write documentation',
+                    assignee: 'Farras',
+                    completed: false,
+                    priority: 'medium',
+                    dueDate: '2024-01-23'
+                },
+                {
+                    id: 7,
+                    name: 'Code review',
+                    assignee: 'Raka',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-17'
+                },
+                {
+                    id: 8,
+                    name: 'Bug fixing',
+                    assignee: 'Very',
+                    completed: true,
+                    priority: 'medium',
+                    dueDate: '2024-01-19'
+                }
+            ]
         },
         {
             id: 2,
-            name: 'Sprint 14 : Design Checkout Flow',
-            subtitle: 'Pizza Party!',
-            progress: 62.5,
-            tasks: 8,
-            completed: 5,
+            name: 'Mobile App Redesign',
+            subtitle: 'Fresh Look!',
             color: '#8BC34A',
-            emoji: '🍕'
+            emoji: '📱',
+            tasks: [
+                {
+                    id: 1,
+                    name: 'Research competitors',
+                    assignee: 'Raka',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-10'
+                },
+                {
+                    id: 2,
+                    name: 'Create moodboard',
+                    assignee: 'Very',
+                    completed: true,
+                    priority: 'medium',
+                    dueDate: '2024-01-12'
+                },
+                {
+                    id: 3,
+                    name: 'Design system update',
+                    assignee: 'Farras',
+                    completed: false,
+                    priority: 'high',
+                    dueDate: '2024-01-25'
+                },
+                {
+                    id: 4,
+                    name: 'Prototype animations',
+                    assignee: 'Raka',
+                    completed: false,
+                    priority: 'medium',
+                    dueDate: '2024-01-28'
+                }
+            ]
         },
         {
             id: 3,
-            name: 'Sprint 14 : Design Checkout Flow',
-            subtitle: 'Pizza Party!',
-            progress: 62.5,
-            tasks: 8,
-            completed: 5,
+            name: 'API Documentation',
+            subtitle: 'Dev Resources',
             color: '#64B5F6',
-            emoji: '🍕'
+            emoji: '📚',
+            tasks: [
+                {
+                    id: 1,
+                    name: 'Write endpoint docs',
+                    assignee: 'Very',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-08'
+                },
+                {
+                    id: 2,
+                    name: 'Add code examples',
+                    assignee: 'Farras',
+                    completed: false,
+                    priority: 'medium',
+                    dueDate: '2024-01-24'
+                }
+            ]
         },
     ],
     2: [
         {
             id: 1,
-            name: 'Network Project',
-            subtitle: 'Infrastructure',
-            progress: 80,
-            tasks: 10,
-            completed: 8,
+            name: 'Network Infrastructure',
+            subtitle: 'Server Migration',
             color: '#C8733B',
-            emoji: '🌐'
+            emoji: '🌐',
+            tasks: [
+                {
+                    id: 1,
+                    name: 'Setup new servers',
+                    assignee: 'Dono',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-05'
+                },
+                {
+                    id: 2,
+                    name: 'Migrate databases',
+                    assignee: 'Makima',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-08'
+                },
+                {
+                    id: 3,
+                    name: 'Configure load balancer',
+                    assignee: 'Rimuru',
+                    completed: false,
+                    priority: 'medium',
+                    dueDate: '2024-01-26'
+                }
+            ]
         },
     ],
     3: [
         {
             id: 1,
-            name: 'PAPB Final',
-            subtitle: 'Mobile Dev',
-            progress: 100,
-            tasks: 5,
-            completed: 5,
+            name: 'PAPB Final Project',
+            subtitle: 'Mobile Development',
             color: '#8BC34A',
-            emoji: '📱'
+            emoji: '📱',
+            tasks: [
+                {
+                    id: 1,
+                    name: 'Setup React Native',
+                    assignee: 'Raka',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-01'
+                },
+                {
+                    id: 2,
+                    name: 'Design UI/UX',
+                    assignee: 'Very',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-05'
+                },
+                {
+                    id: 3,
+                    name: 'Implement features',
+                    assignee: 'Farras',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-12'
+                },
+                {
+                    id: 4,
+                    name: 'Testing & debugging',
+                    assignee: 'Raka',
+                    completed: true,
+                    priority: 'medium',
+                    dueDate: '2024-01-15'
+                },
+                {
+                    id: 5,
+                    name: 'Final presentation',
+                    assignee: 'Very',
+                    completed: true,
+                    priority: 'high',
+                    dueDate: '2024-01-18'
+                }
+            ]
         },
     ],
 };
@@ -79,23 +249,24 @@ export default function ProjectTab() {
     const [filterCompleted, setFilterCompleted] = useState(false);
     const [filterPizzaParty, setFilterPizzaParty] = useState(false);
 
-    const addTask = () => {
-        setTasks([...tasks, { name: '', assignee: 'Raka' }]);
-    };
-
-    const removeTask = (index: number) => {
-        setTasks(tasks.filter((_, i) => i !== index));
-    };
-
     const handleProjectPress = (projectId: number) => {
-        router.push(`/group/${id}/projects/${projectId}/[projectId]` as any);
+        router.push(`/group/${id}/projects/${projectId}` as any);
     };
 
     const filteredProjects = projects.filter(project => {
-        if (filterCompleted && project.progress < 100) return false;
+        if (filterCompleted && project.tasks.every((t: any) => t.completed)) return false;
         if (filterPizzaParty && !project.subtitle.includes('Pizza')) return false;
         return true;
     });
+
+    const handleClearFilters = () => {
+        setFilterCompleted(false);
+        setFilterPizzaParty(false);
+    };
+
+    const getCompletedCount = (tasks: any[]) => {
+        return tasks.filter(t => t.completed).length;
+    };
 
     return (
         <View style={styles.container}>
@@ -121,7 +292,10 @@ export default function ProjectTab() {
                     {filterPizzaParty && <Ionicons name="close-circle" size={16} color="#C8733B" />}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.clearFilters}>
+                <TouchableOpacity 
+                    style={styles.clearFilters}
+                    onPress={handleClearFilters}
+                >
                     <Text style={styles.clearFiltersText}>Clear filters</Text>
                 </TouchableOpacity>
             </View>
@@ -131,26 +305,33 @@ export default function ProjectTab() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {filteredProjects.map((project) => (
-                    <TouchableOpacity
-                        key={project.id}
-                        style={[styles.projectCard, { backgroundColor: project.color }]}
-                        onPress={() => handleProjectPress(project.id)}
-                    >
-                        <View style={styles.emojiContainer}>
-                            <Text style={styles.emoji}>{project.emoji}</Text>
-                        </View>
-
-                        <View style={styles.projectContent}>
-                            <Text style={styles.projectName}>{project.name}</Text>
-                            <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
-
-                            <View style={styles.tasksInfo}>
-                                <Text style={styles.tasksText}>{project.completed}/{project.tasks} Tasks</Text>
+                {filteredProjects.map((project) => {
+                    const completedCount = getCompletedCount(project.tasks);
+                    const totalCount = project.tasks.length;
+                    
+                    return (
+                        <TouchableOpacity
+                            key={project.id}
+                            style={[styles.projectCard, { backgroundColor: project.color }]}
+                            onPress={() => handleProjectPress(project.id)}
+                        >
+                            <View style={styles.emojiContainer}>
+                                <Text style={styles.emoji}>{project.emoji}</Text>
                             </View>
-                        </View>
-                    </TouchableOpacity>
-                ))}
+
+                            <View style={styles.projectContent}>
+                                <Text style={styles.projectName}>{project.name}</Text>
+                                <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
+
+                                <View style={styles.tasksInfo}>
+                                    <Text style={styles.tasksText}>
+                                        {completedCount}/{totalCount} Tasks
+                                    </Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
 
                 {filteredProjects.length === 0 && (
                     <View style={styles.emptyState}>

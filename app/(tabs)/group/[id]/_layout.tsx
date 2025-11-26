@@ -2,12 +2,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import ProjectScreen from './projects/project'; // Import your project screen
-import ChatScreen from './chat/chat'; // Import your chat screen
+import ProjectScreen from './projects/project';
+import ChatScreen from './chat/chat';
 
 const Tab = createMaterialTopTabNavigator();
 
-// Mock data
 const TEAMS_DATA = [
     {
         id: 1,
@@ -42,12 +41,15 @@ export default function GroupDetailLayout() {
         );
     }
 
+    // Pass groupId to screens via initialParams on the Tab.Screen components below
+    // (removed inline wrapper components to avoid JSX prop type errors)
+
     return (
         <View style={styles.container}>
             {/* Header with Team Info */}
             <View style={[styles.header, { backgroundColor: team.bgColor }]}>
                 <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => router.back()}>
+                    <TouchableOpacity onPress={() => router.push('/group')}>
                         <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
                     <TouchableOpacity>
@@ -79,6 +81,7 @@ export default function GroupDetailLayout() {
                 <Tab.Screen
                     name="Projects"
                     component={ProjectScreen}
+                    initialParams={{ groupId: id }}
                     options={{
                         tabBarIcon: ({ color }) => (
                             <Ionicons name="folder-outline" size={20} color={color} />
@@ -88,6 +91,7 @@ export default function GroupDetailLayout() {
                 <Tab.Screen
                     name="Chat"
                     component={ChatScreen}
+                    initialParams={{ groupId: id }}
                     options={{
                         tabBarIcon: ({ color }) => (
                             <Ionicons name="chatbubble-outline" size={20} color={color} />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     View,
     Text,
@@ -8,60 +8,94 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
-interface Message {
-    id: number;
-    sender: string;
-    message: string;
-    time: string;
-    isMe: boolean;
-}
+import { ChatService, Message } from "@/services/chat.service";
+import { Timestamp } from "firebase/firestore";
 
 export default function ChatTab() {
-    const { id } = useLocalSearchParams();
-
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: 1,
-            sender: "Raka",
-            message: "Hey guys, jangan lupa meeting jam 2 siang!",
-            time: "10:30",
-            isMe: false,
-        },
-        {
-            id: 2,
-            sender: "You",
-            message: "Oke siap, di ruangan mana?",
-            time: "10:32",
-            isMe: true,
-        },
-        {
-            id: 3,
-            sender: "Very",
-            message: "Ruang meeting lantai 3",
-            time: "10:33",
-            isMe: false,
-        },
-    ]);
-
+    const { id: groupId, userId, userName } = useLocalSearchParams();
+    
+    const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [sending, setSending] = useState(false);
+    const scrollViewRef = useRef<ScrollView>(null);
 
-    const handleSend = () => {
-        if (inputText.trim()) {
-            const newMessage: Message = {
-                id: messages.length + 1,
-                sender: "You",
-                message: inputText,
-                time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-                isMe: true,
-            };
-            setMessages([...messages, newMessage]);
-            setInputText("");
+    // Subscribe to messages from Firebase
+    useEffect(() => {
+        if (!groupId || typeof groupId !== 'string') {
+            console.error("Group ID is required");
+            setLoading(false);
+            return;
+        }
+
+        const unsubscribe = ChatService.subscribeToMessages(
+            groupId,
+            (newMessages) => {
+                setMessages(newMessages);
+                setLoading(false);
+                // Auto scroll to bottom when new message arrives
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+            }
+        );
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
+    }, [groupId]);
+
+    const handleSend = async () => {
+        if (!inputText.trim() || !groupId || !userId || !userName) {
+            return;
+        }
+
+        const messageText = inputText.trim();
+        setInputText("");
+        setSending(true);
+
+        try {
+            await ChatService.sendMessage({
+                groupId: groupId as string,
+                userId: userId as string,
+                userName: userName as string,
+                text: messageText,
+            });
+        } catch (error) {
+            console.error("Error sending message:", error);
+            // Restore message on error
+            setInputText(messageText);
+            alert("Failed to send message. Please try again.");
+        } finally {
+            setSending(false);
         }
     };
+
+    const formatTime = (timestamp: Timestamp | null) => {
+        if (!timestamp) return "";
+        
+        const date = timestamp.toDate();
+        return date.toLocaleTimeString('id-ID', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    };
+
+    const isMyMessage = (message: Message) => {
+        return message.userId === userId;
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, styles.centerContent]}>
+                <ActivityIndicator size="large" color="#C8733B" />
+                <Text style={styles.loadingText}>Loading messages...</Text>
+            </View>
+        );
+    }
 
     return (
         <KeyboardAvoidingView
@@ -70,39 +104,59 @@ export default function ChatTab() {
             keyboardVerticalOffset={100}
         >
             <ScrollView
+                ref={scrollViewRef}
                 style={styles.messagesContainer}
                 contentContainerStyle={styles.messagesContent}
                 showsVerticalScrollIndicator={false}
+                onContentSizeChange={() => 
+                    scrollViewRef.current?.scrollToEnd({ animated: true })
+                }
             >
-                {messages.map((msg) => (
-                    <View
-                        key={msg.id}
-                        style={[
-                            styles.messageItem,
-                            msg.isMe ? styles.myMessage : styles.otherMessage,
-                        ]}
-                    >
-                        {!msg.isMe && (
-                            <Text style={styles.senderName}>{msg.sender}</Text>
-                        )}
-                        <View
-                            style={[
-                                styles.messageBubble,
-                                msg.isMe ? styles.myBubble : styles.otherBubble,
-                            ]}
-                        >
-                            <Text
+                {messages.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+                        <Text style={styles.emptyText}>
+                            No messages yet. Start the conversation!
+                        </Text>
+                    </View>
+                ) : (
+                    messages.map((msg) => {
+                        const isMine = isMyMessage(msg);
+                        return (
+                            <View
+                                key={msg.messageId}
                                 style={[
-                                    styles.messageText,
-                                    msg.isMe ? styles.myMessageText : styles.otherMessageText,
+                                    styles.messageItem,
+                                    isMine ? styles.myMessage : styles.otherMessage,
                                 ]}
                             >
-                                {msg.message}
-                            </Text>
-                        </View>
-                        <Text style={styles.messageTime}>{msg.time}</Text>
-                    </View>
-                ))}
+                                {!isMine && (
+                                    <Text style={styles.senderName}>
+                                        {msg.userName}
+                                    </Text>
+                                )}
+                                <View
+                                    style={[
+                                        styles.messageBubble,
+                                        isMine ? styles.myBubble : styles.otherBubble,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.messageText,
+                                            isMine ? styles.myMessageText : styles.otherMessageText,
+                                        ]}
+                                    >
+                                        {msg.text}
+                                    </Text>
+                                </View>
+                                <Text style={styles.messageTime}>
+                                    {formatTime(msg.createdAt)}
+                                </Text>
+                            </View>
+                        );
+                    })
+                )}
             </ScrollView>
 
             {/* Input Area */}
@@ -118,21 +172,26 @@ export default function ChatTab() {
                     onChangeText={setInputText}
                     multiline
                     maxLength={500}
+                    editable={!sending}
                 />
 
                 <TouchableOpacity
                     style={[
                         styles.sendButton,
-                        !inputText.trim() && styles.sendButtonDisabled,
+                        (!inputText.trim() || sending) && styles.sendButtonDisabled,
                     ]}
                     onPress={handleSend}
-                    disabled={!inputText.trim()}
+                    disabled={!inputText.trim() || sending}
                 >
-                    <Ionicons
-                        name="send"
-                        size={20}
-                        color={inputText.trim() ? "#fff" : "#ccc"}
-                    />
+                    {sending ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                        <Ionicons
+                            name="send"
+                            size={20}
+                            color={inputText.trim() ? "#fff" : "#ccc"}
+                        />
+                    )}
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
@@ -144,12 +203,34 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f4e4c1',
     },
+    centerContent: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+        color: '#666',
+    },
     messagesContainer: {
         flex: 1,
     },
     messagesContent: {
         padding: 16,
         paddingBottom: 20,
+        flexGrow: 1,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#999',
+        textAlign: 'center',
     },
     messageItem: {
         marginBottom: 16,
