@@ -3,19 +3,11 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import TaskCard from "./TaskCard";
-
-type Task = {
-    id: number;
-    name: string;
-    assignee: string;
-    dueDate: string;
-    priority: string;
-    completed: boolean;
-};
+import type { Task } from "@/constants/projectsData";
 
 type TaskListProps = {
     tasks: Task[];
-    onToggleTaskComplete: (taskId: number) => void;
+    onToggleTaskComplete: (taskId: string) => void;
 };
 
 export default function TaskList({ tasks, onToggleTaskComplete }: TaskListProps) {

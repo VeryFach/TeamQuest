@@ -2,33 +2,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-type Task = {
-    id: number;
-    name: string;
-    assignee: string;
-    dueDate: string;
-    priority: string;
-    completed: boolean;
-};
+import type { Task } from "@/constants/projectsData";
 
 type TaskCardProps = {
     task: Task;
-    onToggleComplete: (taskId: number) => void;
+    onToggleComplete: (taskId: string) => void;
 };
 
 export default function TaskCard({ task, onToggleComplete }: TaskCardProps) {
-    const getPriorityColor = (priority: string) => {
-        switch (priority) {
-            case 'high': return '#FF5252';
-            case 'medium': return '#FFA726';
-            case 'low': return '#66BB6A';
-            default: return '#999';
-        }
-    };
-
-    const getPriorityLabel = (priority: string) => {
-        return priority.charAt(0).toUpperCase() + priority.slice(1);
+    // Format tanggal
+    const formatDate = (date: Date) => {
+        const d = new Date(date);
+        return d.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
+        });
     };
 
     return (
@@ -49,34 +37,26 @@ export default function TaskCard({ task, onToggleComplete }: TaskCardProps) {
 
             <View style={styles.taskContent}>
                 <Text style={[
-                    styles.taskName,
-                    task.completed && styles.taskNameCompleted
+                    styles.taskTitle,
+                    task.completed && styles.taskTitleCompleted
                 ]}>
-                    {task.name}
+                    {task.title}
                 </Text>
 
                 <View style={styles.taskMeta}>
                     <View style={styles.taskMetaItem}>
-                        <Ionicons name="person-outline" size={14} color="#999" />
-                        <Text style={styles.taskMetaText}>{task.assignee}</Text>
-                    </View>
-
-                    <View style={styles.taskMetaItem}>
                         <Ionicons name="calendar-outline" size={14} color="#999" />
                         <Text style={styles.taskMetaText}>
-                            {new Date(task.dueDate).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric'
-                            })}
+                            {formatDate(task.createdAt)}
                         </Text>
                     </View>
 
                     <View style={[
-                        styles.priorityBadge,
-                        { backgroundColor: getPriorityColor(task.priority) }
+                        styles.statusBadge,
+                        { backgroundColor: task.completed ? '#66BB6A' : '#FFA726' }
                     ]}>
-                        <Text style={styles.priorityText}>
-                            {getPriorityLabel(task.priority)}
+                        <Text style={styles.statusText}>
+                            {task.completed ? 'Done' : 'Pending'}
                         </Text>
                     </View>
                 </View>
@@ -118,20 +98,20 @@ const styles = StyleSheet.create({
     taskContent: {
         flex: 1,
     },
-    taskName: {
+    taskTitle: {
         fontSize: 16,
         fontWeight: '600',
         color: '#333',
         marginBottom: 8,
     },
-    taskNameCompleted: {
+    taskTitleCompleted: {
         textDecorationLine: 'line-through',
         color: '#999',
     },
     taskMeta: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        justifyContent: 'space-between',
     },
     taskMetaItem: {
         flexDirection: 'row',
@@ -142,13 +122,12 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#999',
     },
-    priorityBadge: {
+    statusBadge: {
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 4,
-        marginLeft: 'auto',
     },
-    priorityText: {
+    statusText: {
         fontSize: 11,
         fontWeight: '600',
         color: '#fff',
