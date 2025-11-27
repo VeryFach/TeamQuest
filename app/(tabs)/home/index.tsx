@@ -1,5 +1,6 @@
-import RewardCard from "@/components/home/Card";
-import { Ionicons } from "@expo/vector-icons";
+import FAB from "@/components/common/FAB";
+import ProjectCard, { Project } from "@/components/home/ProjectCard";
+import TaskItem, { Task } from "@/components/home/TaskItem";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
@@ -13,53 +14,61 @@ import {
 
 export default function Home() {
   const router = useRouter();
-  const [task, setTask] = useState([
+  const [tasks, setTasks] = useState<Task[]>([
     {
       id: 1,
       name: "KOMGRAF",
       group: "Private",
       completed: false,
+      projectId: "project-3",
     },
     {
       id: 2,
       name: "PAPB",
       group: "Tim Ragnarok",
       completed: true,
+      projectId: "project-1",
     },
     {
       id: 3,
       name: "Machine Learning Assignment",
       group: "AI Squad",
       completed: false,
+      projectId: "project-2",
     },
     {
       id: 4,
       name: "Database Design",
       group: "Private",
       completed: false,
+      projectId: "project-3",
     },
     {
       id: 5,
       name: "UI/UX Prototype",
       group: "Design Team",
       completed: true,
+      projectId: "project-1",
     },
     {
       id: 6,
       name: "Backend API Development",
       group: "Dev Team",
       completed: false,
+      projectId: "project-2",
     },
     {
       id: 7,
       name: "Testing & Debugging",
       group: "QA Team",
       completed: false,
+      projectId: "project-1",
     },
   ]);
 
-  const [project, setProject] = useState([
+  const [projects, setProjects] = useState<Project[]>([
     {
+      id: "project-1",
       group_name: "Team Produktif",
       reward: "Pizza Party!",
       reward_emot: "🍕",
@@ -67,6 +76,7 @@ export default function Home() {
       tasks_completed: 15,
     },
     {
+      id: "project-2",
       group_name: "Keluarnya Hebat",
       reward: "Movie Night!",
       reward_emot: "🎥",
@@ -74,6 +84,7 @@ export default function Home() {
       tasks_completed: 2,
     },
     {
+      id: "project-3",
       group_name: "Private",
       reward: "Gaming!",
       reward_emot: "🎮",
@@ -84,7 +95,7 @@ export default function Home() {
 
   // Toggle task completion
   const toggleTaskCompletion = (taskId: number) => {
-    setTask((prevTasks) =>
+    setTasks((prevTasks) =>
       prevTasks.map((t) =>
         t.id === taskId ? { ...t, completed: !t.completed } : t
       )
@@ -93,11 +104,11 @@ export default function Home() {
 
   // Sort tasks: incomplete first, then completed
   const sortedTasks = useMemo(() => {
-    return [...task].sort((a, b) => {
+    return [...tasks].sort((a, b) => {
       if (a.completed === b.completed) return 0;
       return a.completed ? 1 : -1; // completed tasks go to bottom
     });
-  }, [task]);
+  }, [tasks]);
 
   return (
     <View style={styles.container}>
@@ -112,7 +123,7 @@ export default function Home() {
         {/* SCROLLVIEW DI SINI - bungkus semua konten */}
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, gap: 24 }}
+          contentContainerStyle={{ padding: 20, gap: 24, paddingBottom: 100 }}
         >
           {/* Section My Tasks Today */}
           <View>
@@ -123,71 +134,13 @@ export default function Home() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ marginTop: 12 }}>
-              {sortedTasks.map((t) => (
-                <View
-                  key={t.id}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginTop: 8,
-                    opacity: t.completed ? 0.6 : 1, // Fade completed tasks
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => toggleTaskCompletion(t.id)}
-                    style={{
-                      height: 20,
-                      width: 20,
-                      borderRadius: 20,
-                      backgroundColor: "#fff",
-                      borderWidth: 1,
-                      borderColor: "#000",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginRight: 10,
-                    }}
-                  >
-                    {t.completed ? (
-                      <Ionicons
-                        name="checkmark-sharp"
-                        size={15}
-                        color="#09ff00ff"
-                      />
-                    ) : null}
-                  </TouchableOpacity>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      width: "90%",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        textDecorationLine: t.completed
-                          ? "line-through"
-                          : "none",
-                      }}
-                    >
-                      {t.name}
-                    </Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <Ionicons
-                        name={t.group === "Private" ? "person" : "people"}
-                        size={18}
-                        color="#000"
-                      />
-                      <Text>{t.group}</Text>
-                    </View>
-                  </View>
-                </View>
+            <View style={{ marginTop: 8 }}>
+              {sortedTasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onToggleComplete={toggleTaskCompletion}
+                />
               ))}
             </View>
           </View>
@@ -204,33 +157,16 @@ export default function Home() {
                 <Text style={styles.viewMore}>view more</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ marginTop: 12 }}>
-              {project.map((t, i) => (
-                <View
-                  key={i}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginTop: 8,
-                  }}
-                >
-                  <RewardCard data={t} />
-                </View>
+            <View style={{ marginTop: 8 }}>
+              {projects.map((project) => (
+                <ProjectCard key={project.id} data={project} />
               ))}
             </View>
           </View>
         </ScrollView>
       </View>
       {/* Tombol Plus - Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          // Tambahkan aksi saat tombol ditekan
-          console.log("Plus button pressed");
-        }}
-      >
-        <Ionicons name="add" size={32} color="#000" />
-      </TouchableOpacity>
+      <FAB />
     </View>
   );
 }
@@ -289,21 +225,5 @@ const styles = StyleSheet.create({
     color: "#C8733B",
     fontWeight: "bold",
     fontSize: 14,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    width: 70,
-    height: 70,
-    borderRadius: 40,
-    backgroundColor: "#F3E4BD",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 8,
   },
 });
