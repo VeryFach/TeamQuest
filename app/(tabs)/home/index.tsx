@@ -1,6 +1,8 @@
 import FAB from "@/components/common/FAB";
-import ProjectCard, { Project } from "@/components/home/ProjectCard";
-import TaskItem, { Task } from "@/components/home/TaskItem";
+import ProjectCard from "@/components/home/ProjectCard";
+import TaskItem from "@/components/home/TaskItem";
+// Import data dummy yang baru
+import { PROJECTS_DATA } from "@/constants/projectsData";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
@@ -14,87 +16,44 @@ import {
 
 export default function Home() {
   const router = useRouter();
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      name: "KOMGRAF",
-      group: "Private",
-      completed: false,
-      projectId: "project-3",
-    },
-    {
-      id: 2,
-      name: "PAPB",
-      group: "Tim Ragnarok",
-      completed: true,
-      projectId: "project-1",
-    },
-    {
-      id: 3,
-      name: "Machine Learning Assignment",
-      group: "AI Squad",
-      completed: false,
-      projectId: "project-2",
-    },
-    {
-      id: 4,
-      name: "Database Design",
-      group: "Private",
-      completed: false,
-      projectId: "project-3",
-    },
-    {
-      id: 5,
-      name: "UI/UX Prototype",
-      group: "Design Team",
-      completed: true,
-      projectId: "project-1",
-    },
-    {
-      id: 6,
-      name: "Backend API Development",
-      group: "Dev Team",
-      completed: false,
-      projectId: "project-2",
-    },
-    {
-      id: 7,
-      name: "Testing & Debugging",
-      group: "QA Team",
-      completed: false,
-      projectId: "project-1",
-    },
-  ]);
 
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: "project-1",
-      group_name: "Team Produktif",
-      reward: "Pizza Party!",
-      reward_emot: "🍕",
-      tasks_total: 20,
-      tasks_completed: 15,
-    },
-    {
-      id: "project-2",
-      group_name: "Keluarnya Hebat",
-      reward: "Movie Night!",
-      reward_emot: "🎥",
-      tasks_total: 4,
-      tasks_completed: 2,
-    },
-    {
-      id: "project-3",
-      group_name: "Private",
-      reward: "Gaming!",
-      reward_emot: "🎮",
-      tasks_total: 4,
-      tasks_completed: 2,
-    },
-  ]);
+  // 1. Mengambil semua task dari PROJECTS_DATA dan meratakannya (flatten)
+  // serta mapping agar sesuai dengan props yang diharapkan TaskItem (misal: title -> name)
+  const initialTasks = useMemo(() => {
+    const allTasks: any[] = [];
+    PROJECTS_DATA.forEach((project) => {
+      project.tasks.forEach((task) => {
+        allTasks.push({
+          id: task.id, // Menggunakan string ID dari data baru
+          name: task.title, // Map 'title' dari data baru ke 'name' (props lama)
+          group: project.group || "Private",
+          completed: task.completed,
+          projectId: project.id,
+        });
+      });
+    });
+    return allTasks;
+  }, []);
 
-  // Toggle task completion
-  const toggleTaskCompletion = (taskId: number) => {
+  const [tasks, setTasks] = useState(initialTasks);
+
+  // 2. Mapping PROJECTS_DATA agar sesuai dengan props ProjectCard
+  const initialProjects = useMemo(() => {
+    return PROJECTS_DATA.map((project) => ({
+      id: project.id,
+      group_name: project.group || "Private",
+      // Menggunakan subtitle sebagai 'reward' (keterangan singkat di kartu)
+      reward: project.subtitle,
+      reward_emot: project.emoji,
+      tasks_total: project.tasks.length,
+      tasks_completed: project.tasks.filter((t) => t.completed).length,
+    }));
+  }, []);
+
+  const [projects, setProjects] = useState(initialProjects);
+
+  // Toggle task completion (ID sekarang string)
+  const toggleTaskCompletion = (taskId: string) => {
     setTasks((prevTasks) =>
       prevTasks.map((t) =>
         t.id === taskId ? { ...t, completed: !t.completed } : t
@@ -124,6 +83,7 @@ export default function Home() {
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 20, gap: 24, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
         >
           {/* Section My Tasks Today */}
           <View>
@@ -135,29 +95,37 @@ export default function Home() {
             </View>
 
             <View style={{ marginTop: 8 }}>
-              {sortedTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggleComplete={toggleTaskCompletion}
-                />
-              ))}
+              {sortedTasks.length > 0 ? (
+                sortedTasks.slice(0, 5).map(
+                  (
+                    task // Menampilkan max 5 task agar tidak terlalu panjang
+                  ) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onToggleComplete={() => toggleTaskCompletion(task.id)}
+                    />
+                  )
+                )
+              ) : (
+                <Text
+                  style={{ color: "#666", fontStyle: "italic", marginTop: 10 }}
+                >
+                  No tasks for today.
+                </Text>
+              )}
             </View>
           </View>
 
-          {/* Section My Projects - jarak diatur oleh gap: 24 di contentContainerStyle */}
-          <View
-            style={{
-              marginBottom: 20,
-            }}
-          >
+          {/* Section My Projects */}
+          <View style={{ marginBottom: 20 }}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>My Projects</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/group")}>
                 <Text style={styles.viewMore}>view more</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ marginTop: 8 }}>
+            <View style={{ marginTop: 8, gap: 10 }}>
               {projects.map((project) => (
                 <ProjectCard key={project.id} data={project} />
               ))}
@@ -165,6 +133,7 @@ export default function Home() {
           </View>
         </ScrollView>
       </View>
+
       {/* Tombol Plus - Floating Action Button */}
       <FAB />
     </View>
@@ -215,6 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 12,
+    justifyContent: "space-between", // Memastikan 'view more' di kanan
   },
   cardTitle: {
     fontWeight: "bold",

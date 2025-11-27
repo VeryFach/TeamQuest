@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -20,6 +20,9 @@ export interface Project {
 interface ProjectCardProps {
   data: Project;
   onPress?: (projectId: string) => void;
+  scale?: number; // Persentase, misal 100 (normal), 80 (kecil)
+  customWidth?: number;
+  customBgColor?: string;
 }
 
 const colorMap: { [key: string]: string } = {
@@ -45,14 +48,26 @@ const getAccentColor = (emot: string): string => {
 
 const { width } = Dimensions.get("window");
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ data, onPress }) => {
+const ProjectCard: React.FC<ProjectCardProps> = ({
+  data,
+  onPress,
+  scale = 100, // Default 100%
+  customWidth,
+  customBgColor,
+}) => {
   const router = useRouter();
   const { id, group_name, reward, reward_emot, tasks_total, tasks_completed } =
     data;
 
-  const backgroundColor = getBackgroundColor(reward_emot);
+  const backgroundColor = customBgColor || getBackgroundColor(reward_emot);
   const accentColor = getAccentColor(reward_emot);
   const progress = tasks_total > 0 ? tasks_completed / tasks_total : 0;
+
+  // 1. Hitung Faktor Skala (0.8, 1.0, 1.2, dll)
+  const scaleFactor = scale / 100;
+
+  // 2. Helper function untuk mengalikan ukuran
+  const s = (size: number) => size * scaleFactor;
 
   const handlePress = () => {
     if (onPress) {
@@ -65,26 +80,80 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ data, onPress }) => {
     }
   };
 
+  // Kita gunakan useMemo agar style tidak dihitung ulang setiap render kecuali scale berubah
+  const dynamicStyles = useMemo(() => {
+    const baseWidth = customWidth || width * 0.9;
+
+    return StyleSheet.create({
+      cardContainer: {
+        width: baseWidth * scaleFactor, // Width ikut mengecil
+        borderRadius: s(15),
+        padding: s(20),
+        marginVertical: s(6),
+        // Shadow juga perlu disesuaikan sedikit agar tidak terlalu tebal saat kecil
+        shadowOffset: { width: 0, height: s(4) },
+        shadowRadius: s(5),
+      },
+      header: {
+        marginBottom: s(15),
+      },
+      rewardEmot: {
+        fontSize: s(50), // Font ikut mengecil
+        marginRight: s(15),
+      },
+      rewardText: {
+        fontSize: s(24),
+        marginBottom: s(2), // Sedikit jarak antar text
+      },
+      groupText: {
+        fontSize: s(16),
+      },
+      progressBarBackground: {
+        marginVertical: s(10),
+        height: s(5),
+        borderRadius: s(5),
+      },
+      tasksStatus: {
+        fontSize: s(14),
+        marginTop: s(5),
+      },
+    });
+  }, [scaleFactor, customWidth]);
+
   return (
     <TouchableOpacity
-      style={[styles.cardContainer, { backgroundColor: backgroundColor }]}
+      style={[
+        baseStyles.cardBase, // Style statis (warna, flex, shadow color)
+        dynamicStyles.cardContainer, // Style dinamis (ukuran)
+        { backgroundColor: backgroundColor },
+      ]}
       onPress={handlePress}
       activeOpacity={0.8}
     >
       {/* Header: Emot & Title */}
-      <View style={styles.header}>
-        <Text style={styles.rewardEmot}>{reward_emot}</Text>
-        <View style={styles.textGroup}>
-          <Text style={styles.rewardText}>{reward}</Text>
-          <Text style={styles.groupText}>Group: {group_name}</Text>
+      <View style={[baseStyles.headerBase, dynamicStyles.header]}>
+        <Text style={dynamicStyles.rewardEmot}>{reward_emot}</Text>
+        <View style={baseStyles.textGroup}>
+          <Text style={[baseStyles.textWhiteBold, dynamicStyles.rewardText]}>
+            {reward}
+          </Text>
+          <Text style={[baseStyles.textGroupBase, dynamicStyles.groupText]}>
+            {group_name && "Group: "}
+            {group_name}
+          </Text>
         </View>
       </View>
 
       {/* Progress Bar */}
-      <View style={styles.progressBarBackground}>
+      <View
+        style={[
+          dynamicStyles.progressBarBackground,
+          baseStyles.progressOverflow,
+        ]}
+      >
         <View
           style={[
-            styles.progressBarFill,
+            baseStyles.progressBarFill,
             {
               width: `${progress * 100}%`,
               backgroundColor: accentColor,
@@ -93,7 +162,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ data, onPress }) => {
         />
         <View
           style={[
-            styles.progressBarRemaining,
+            baseStyles.progressBarRemaining,
             {
               width: `${(1 - progress) * 100}%`,
               backgroundColor: `${accentColor}50`,
@@ -103,66 +172,45 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ data, onPress }) => {
       </View>
 
       {/* Footer: Task Count */}
-      <Text style={styles.tasksStatus}>
+      <Text style={[baseStyles.textWhiteBold, dynamicStyles.tasksStatus]}>
         {tasks_completed}/{tasks_total} Tasks Completed
       </Text>
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
-  cardContainer: {
-    width: width * 0.9,
-    borderRadius: 15,
-    padding: 20,
-    marginVertical: 6,
+// Style Statis (Yang tidak berhubungan dengan ukuran angka)
+const baseStyles = StyleSheet.create({
+  cardBase: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
     elevation: 8,
   },
-  header: {
+  headerBase: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
-  },
-  rewardEmot: {
-    fontSize: 50,
-    marginRight: 15,
   },
   textGroup: {
     flex: 1,
   },
-  rewardText: {
-    fontSize: 24,
+  textWhiteBold: {
     fontWeight: "bold",
     color: "white",
   },
-  groupText: {
-    fontSize: 16,
+  textGroupBase: {
     color: "#E0E0E0",
     opacity: 0.8,
   },
-  progressBarBackground: {
-    marginVertical: 10,
-    height: 5,
-    borderRadius: 5,
+  progressOverflow: {
     flexDirection: "row",
     overflow: "hidden",
+    backgroundColor: "rgba(0,0,0,0.1)", // Optional background track
   },
   progressBarFill: {
     height: "100%",
-    borderRadius: 5,
   },
   progressBarRemaining: {
     height: "100%",
-  },
-  tasksStatus: {
-    fontSize: 14,
-    color: "white",
-    fontWeight: "600",
-    marginTop: 5,
   },
 });
 

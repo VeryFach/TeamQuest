@@ -1,23 +1,58 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from "react";
+import {
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 // Import Komponen
-import Header from '../../../components/todo/Header';
-import CustomCalendar from '../../../components/todo/CustomCalendar';
-import FloatingStatusBar from '../../../components/todo/FloatingStatusBar';
-import CompletedList from '../../../components/todo/CompletedList';
-import ProjectList from '../../../components/todo/ProjectList';
-import GroupSelectorModal from '../../../components/todo/GroupSelectorModal';
+import ActiveTaskCard from "@/components/todo/ActiveTaskCard";
+import CompletedList from "@/components/todo/CompletedList";
+import CustomCalendar from "@/components/todo/CustomCalendar";
+import DynamicSelectorModal from "@/components/todo/DynamicSelectorModal";
+import FloatingStatusBar from "@/components/todo/FloatingStatusBar";
+import Header from "@/components/todo/Header";
+import ProjectList from "@/components/todo/ProjectList";
+import { PROJECTS_DATA } from "@/constants/projectsData";
+import { useProjectFilter } from "@/hooks/useProjectFilter";
+
+// Data Bulan
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// Generate Tahun (misal: dari 2020 sampai 2030)
+const years = Array.from({ length: 11 }, (_, i) => 2020 + i);
 
 export default function TodoListScreen() {
   const [isCalendarVisible, setCalendarVisible] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date()); 
-  const [viewDate, setViewDate] = useState(new Date()); 
-  const [isGroupModalVisible, setGroupModalVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewDate, setViewDate] = useState(new Date());
+  const { totalUncompletedTasks, totalAllTasks } = useProjectFilter("group");
 
-  // 1. STATE BARU: Untuk melacak tab mana yang aktif ('group' atau 'private')
-  const [activeTab, setActiveTab] = useState<'group' | 'private'>('group');
+  // State untuk Modal/Dropdown
+  const [isMonthPickerVisible, setMonthPickerVisible] = useState(false);
+  const [isYearPickerVisible, setYearPickerVisible] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"group" | "private">("group");
+  const [modalVisible, setModalVisible] = useState(false);
+  // --- Logic Ganti Bulan/Tahun ---
+  const { completedTasks } = useProjectFilter(activeTab);
 
   const changeMonth = (increment: number) => {
     const newDate = new Date(viewDate);
@@ -25,123 +60,256 @@ export default function TodoListScreen() {
     setViewDate(newDate);
   };
 
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(viewDate);
+    newDate.setMonth(monthIndex);
+    setViewDate(newDate);
+    setMonthPickerVisible(false); // Tutup modal
+  };
+
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(viewDate);
+    newDate.setFullYear(year);
+    setViewDate(newDate);
+    setYearPickerVisible(false); // Tutup modal
+  };
+  // -------------------------------
+
   const getHeaderDateLabel = () => {
     const today = new Date();
     if (selectedDate.toDateString() === today.toDateString()) return "Today";
-    return selectedDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    return selectedDate.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   };
 
   const handleSelectGroup = (group: any) => {
     console.log("Grup dipilih:", group.name);
-    setGroupModalVisible(false);
+    setModalVisible(false);
   };
 
   return (
     <View style={styles.container}>
-      
-      {/* Header & Calendar (Tetap Muncul di kedua tab) */}
-      <Header 
-        dateLabel={getHeaderDateLabel()} 
-        isCalendarOpen={isCalendarVisible} 
-        onToggleCalendar={() => {
-          setCalendarVisible(!isCalendarVisible);
-          if(!isCalendarVisible) setViewDate(selectedDate);
-        }}
-      >
-        <CustomCalendar 
-          visible={isCalendarVisible}
-          viewDate={viewDate}
-          selectedDate={selectedDate}
-          onChangeMonth={changeMonth}
-          onSelectDate={(date) => {
-            setSelectedDate(date);
-            setCalendarVisible(false);
-          }}
-        />
-      </Header>
-
-      {/* 2. Floating Bar dengan Props activeTab */}
-      <FloatingStatusBar 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-      />
-
-      <ScrollView 
-        style={styles.contentContainer} 
+      <ScrollView
+        style={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        
-        {/* 3. LOGIKA KONTEN BERDASARKAN TAB */}
-        {activeTab === 'group' ? (
-          /* ================= KONTEN GROUP ================= */
+        <Header
+          dateLabel={getHeaderDateLabel()}
+          isCalendarOpen={isCalendarVisible}
+          onToggleCalendar={() => {
+            setCalendarVisible(!isCalendarVisible);
+            if (!isCalendarVisible) setViewDate(selectedDate);
+          }}
+          totalUncompletedTasks={totalUncompletedTasks}
+          totalAllTasks={totalAllTasks}
+        >
+          <CustomCalendar
+            visible={isCalendarVisible}
+            viewDate={viewDate}
+            selectedDate={selectedDate}
+            onChangeMonth={changeMonth}
+            onSelectDate={(date) => {
+              setSelectedDate(date);
+              setCalendarVisible(false);
+            }}
+            // --- BUKA MODAL DI SINI ---
+            onPressMonth={() => setMonthPickerVisible(true)}
+            onPressYear={() => setYearPickerVisible(true)}
+          />
+        </Header>
+
+        <FloatingStatusBar activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {activeTab === "group" ? (
           <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              <TouchableOpacity style={styles.addCard} onPress={() => setGroupModalVisible(true)}>
-                <View style={styles.addIconCircle}>
-                  <Ionicons name="add" size={30} color="#000000" />
-                </View>
-                <Text style={styles.addCardText}>Add Task</Text>
-              </TouchableOpacity>
-
-              <View style={styles.activeCard}>
-                <View>
-                  <Text style={styles.activeCardTitle}>Daily design exercise</Text>
-                  <Text style={styles.activeCardSubtitle}>Sprint 14 : Design Checkout</Text>
-                  <Text style={styles.activeCardMeta}>Tim Produktif • Today</Text>
-                </View>
-                <Text style={styles.cardEmoji}>🍕</Text>
-              </View>
-            </ScrollView>
-
-            <CompletedList />
-            <ProjectList onAddPress={() => setGroupModalVisible(true)}/>
+            <ActiveTaskCard
+              type="group"
+              onAddPress={() => setModalVisible(true)}
+              onTaskPress={(task) => {
+                console.log("Task pressed:", task);
+                // Navigate to task detail or project
+              }}
+            />
+            <CompletedList completedTasks={completedTasks} />
+            <ProjectList onAddPress={() => setModalVisible(true)} />
           </>
         ) : (
-          /* ================= KONTEN PRIVATE ================= */
-          /* Saat ini isinya sama, tapi nanti kamu bisa ubah bagian ini */
           <>
-             <View style={{paddingHorizontal: 25, marginBottom: 10}}>
-                <Text style={{color: '#d97706', fontWeight: 'bold'}}>Private Workspace</Text>
-             </View>
-
-             {/* Contoh: Di Private mungkin card Add Task-nya beda fungsi */}
-             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              <TouchableOpacity style={styles.addCard}>
-                <View style={styles.addIconCircle}>
-                  <Ionicons name="lock-closed" size={30} color="#000000" />
-                </View>
-                <Text style={styles.addCardText}>Private Task</Text>
-              </TouchableOpacity>
-            </ScrollView>
-
-            {/* Reuse komponen list tapi mungkin datanya beda nanti */}
-            <CompletedList />
-            {/* Private mungkin tidak punya ProjectList tim, jadi saya hide atau ganti */}
+            <ActiveTaskCard
+              type="private"
+              onAddPress={() => setModalVisible(true)}
+              onTaskPress={(task) => {
+                console.log("Task pressed:", task);
+              }}
+            />
+            <CompletedList completedTasks={completedTasks} />
+            <ProjectList
+              onAddPress={() => setModalVisible(true)}
+              type="private"
+            />
           </>
         )}
-
       </ScrollView>
-      
-      <GroupSelectorModal 
-        visible={isGroupModalVisible}
-        onClose={() => setGroupModalVisible(false)}
-        onSelectGroup={handleSelectGroup}
+
+      <DynamicSelectorModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title="Select Group"
+        // 1. Masukkan Data
+        data={PROJECTS_DATA}
+        // 2. Tentukan field mana yang mau ditampilkan (di PROJECTS_DATA fieldnya 'group')
+        displayKey="group"
+        // 3. Tentukan mau navigasi ke mana (otomatis replace [id])
+        routePath="/group/[id]"
       />
+
+      {/* ================= MODAL PEMILIH BULAN ================= */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isMonthPickerVisible}
+        onRequestClose={() => setMonthPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMonthPickerVisible(false)}
+        >
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerHeader}>Select Month</Text>
+            <View style={styles.monthsGrid}>
+              {monthNames.map((month, index) => (
+                <TouchableOpacity
+                  key={month}
+                  style={[
+                    styles.monthItem,
+                    viewDate.getMonth() === index && styles.selectedItem,
+                  ]}
+                  onPress={() => handleMonthSelect(index)}
+                >
+                  <Text
+                    style={[
+                      styles.pickerItemText,
+                      viewDate.getMonth() === index && styles.selectedItemText,
+                    ]}
+                  >
+                    {month.substring(0, 3)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ================= MODAL PEMILIH TAHUN ================= */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isYearPickerVisible}
+        onRequestClose={() => setYearPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setYearPickerVisible(false)}
+        >
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerHeader}>Select Year</Text>
+            <FlatList
+              data={years}
+              keyExtractor={(item) => item.toString()}
+              style={{ maxHeight: 300, width: "100%" }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.yearItem,
+                    viewDate.getFullYear() === item && styles.selectedItem,
+                  ]}
+                  onPress={() => handleYearSelect(item)}
+                >
+                  <Text
+                    style={[
+                      styles.pickerItemText,
+                      viewDate.getFullYear() === item &&
+                        styles.selectedItemText,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFBEB' },
-  contentContainer: { flex: 1, paddingTop: 10, zIndex: 0 },
-  horizontalScroll: { paddingLeft: 25, paddingVertical: 10, marginBottom: 10 },
-  addCard: { width: 110, height: 110, backgroundColor: 'rgba(255,255,255,0.6)', borderWidth: 2, borderColor: '#000000', borderStyle: 'dashed', borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  addIconCircle: { backgroundColor: '#fef3c7', padding: 8, borderRadius: 50, marginBottom: 8 },
-  addCardText: { fontWeight: 'bold', color: '#000000', fontSize: 12 },
-  activeCard: { backgroundColor: 'white', width: 240, height: 110, padding: 15, borderRadius: 20, marginRight: 25, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2, justifyContent: 'space-between', flexDirection: 'row' },
-  activeCardTitle: { fontWeight: 'bold', color: '#1f2937', fontSize: 14, width: 140 },
-  activeCardSubtitle: { fontSize: 10, color: '#6b7280', marginTop: 4 },
-  activeCardMeta: { fontSize: 10, color: '#9ca3af', marginTop: 8 },
-  cardEmoji: { fontSize: 24 },
+  container: { flex: 1, backgroundColor: "#FFFBEB" },
+  contentContainer: { flex: 1, zIndex: 0 },
+
+  /* --- STYLE UNTUK MODAL PICKER --- */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pickerContainer: {
+    backgroundColor: "white",
+    width: "80%",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  pickerHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#78350f",
+  },
+  monthsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 10,
+  },
+  monthItem: {
+    width: "30%",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#FFF7ED",
+  },
+  yearItem: {
+    width: "100%",
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 5,
+    backgroundColor: "#FFF7ED",
+  },
+  selectedItem: {
+    backgroundColor: "#F97316", // Orange saat dipilih
+  },
+  pickerItemText: {
+    fontSize: 16,
+    color: "#431407",
+  },
+  selectedItemText: {
+    color: "white",
+    fontWeight: "bold",
+  },
 });

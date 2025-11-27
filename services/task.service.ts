@@ -4,6 +4,7 @@ import {
   doc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -16,14 +17,16 @@ export interface Task {
   taskName: string;
   assignedTo: string | null;
   isDone: boolean;
+  createdAt: any; // bisa pakai Timestamp dari firebase/firestore jika ingin lebih spesifik
 }
 
 export const TaskService = {
-  async createTask(data: Omit<Task, "taskId">) {
+  async createTask(data: Omit<Task, "taskId" | "createdAt">) {
     const ref = doc(collection(db, "tasks"));
     const newData: Task = {
       taskId: ref.id,
       ...data,
+      createdAt: serverTimestamp(),
     };
     await setDoc(ref, newData);
     return newData;
