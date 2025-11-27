@@ -2,8 +2,7 @@ import RewardCard from "@/components/home/Card";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import FAB from "@/components/common/FAB";
+import { useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -16,14 +15,46 @@ export default function Home() {
   const router = useRouter();
   const [task, setTask] = useState([
     {
+      id: 1,
       name: "KOMGRAF",
       group: "Private",
       completed: false,
     },
     {
+      id: 2,
       name: "PAPB",
       group: "Tim Ragnarok",
       completed: true,
+    },
+    {
+      id: 3,
+      name: "Machine Learning Assignment",
+      group: "AI Squad",
+      completed: false,
+    },
+    {
+      id: 4,
+      name: "Database Design",
+      group: "Private",
+      completed: false,
+    },
+    {
+      id: 5,
+      name: "UI/UX Prototype",
+      group: "Design Team",
+      completed: true,
+    },
+    {
+      id: 6,
+      name: "Backend API Development",
+      group: "Dev Team",
+      completed: false,
+    },
+    {
+      id: 7,
+      name: "Testing & Debugging",
+      group: "QA Team",
+      completed: false,
     },
   ]);
 
@@ -51,6 +82,23 @@ export default function Home() {
     },
   ]);
 
+  // Toggle task completion
+  const toggleTaskCompletion = (taskId: number) => {
+    setTask((prevTasks) =>
+      prevTasks.map((t) =>
+        t.id === taskId ? { ...t, completed: !t.completed } : t
+      )
+    );
+  };
+
+  // Sort tasks: incomplete first, then completed
+  const sortedTasks = useMemo(() => {
+    return [...task].sort((a, b) => {
+      if (a.completed === b.completed) return 0;
+      return a.completed ? 1 : -1; // completed tasks go to bottom
+    });
+  }, [task]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -76,16 +124,18 @@ export default function Home() {
             </View>
 
             <View style={{ marginTop: 12 }}>
-              {task.map((t, i) => (
+              {sortedTasks.map((t) => (
                 <View
-                  key={i}
+                  key={t.id}
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
                     marginTop: 8,
+                    opacity: t.completed ? 0.6 : 1, // Fade completed tasks
                   }}
                 >
-                  <View
+                  <TouchableOpacity
+                    onPress={() => toggleTaskCompletion(t.id)}
                     style={{
                       height: 20,
                       width: 20,
@@ -105,7 +155,7 @@ export default function Home() {
                         color="#09ff00ff"
                       />
                     ) : null}
-                  </View>
+                  </TouchableOpacity>
                   <View
                     style={{
                       flexDirection: "row",
@@ -113,7 +163,15 @@ export default function Home() {
                       width: "90%",
                     }}
                   >
-                    <Text>{t.name}</Text>
+                    <Text
+                      style={{
+                        textDecorationLine: t.completed
+                          ? "line-through"
+                          : "none",
+                      }}
+                    >
+                      {t.name}
+                    </Text>
                     <View
                       style={{
                         flexDirection: "row",
@@ -164,7 +222,15 @@ export default function Home() {
         </ScrollView>
       </View>
       {/* Tombol Plus - Floating Action Button */}
-      <FAB onPress={() => console.log("Plus button pressed")} />
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          // Tambahkan aksi saat tombol ditekan
+          console.log("Plus button pressed");
+        }}
+      >
+        <Ionicons name="add" size={32} color="#000" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -223,5 +289,21 @@ const styles = StyleSheet.create({
     color: "#C8733B",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  fab: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    width: 70,
+    height: 70,
+    borderRadius: 40,
+    backgroundColor: "#F3E4BD",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 8,
   },
 });
