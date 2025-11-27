@@ -1,4 +1,3 @@
-import FAB from "@/components/common/FAB";
 import RewardCard from "@/components/home/Card";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
@@ -223,7 +222,15 @@ export default function Home() {
         </ScrollView>
       </View>
       {/* Tombol Plus - Floating Action Button */}
-      <FAB onPress={() => console.log("Plus button pressed")} />
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          // Tambahkan aksi saat tombol ditekan
+          console.log("Plus button pressed");
+        }}
+      >
+        <Ionicons name="add" size={32} color="#000" />
+      </TouchableOpacity>
     </View>
   );
 }
