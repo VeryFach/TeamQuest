@@ -29,12 +29,12 @@ export const UserService = {
   async getUsersByIds(userIds: string[]) {
     if (userIds.length === 0) return [];
 
-    const users: User[] = [];
-    for (const userId of userIds) {
-      const user = await UserService.getUser(userId);
-      if (user) users.push(user);
-    }
-    return users;
+    // Request semua data secara bersamaan (Parallel)
+    const promises = userIds.map((id) => UserService.getUser(id));
+    const results = await Promise.all(promises);
+
+    // Filter hasil yang null (jika user tidak ditemukan)
+    return results.filter((user): user is User => user !== null);
   },
 
   async updateUser(userId: string, data: Partial<User>) {

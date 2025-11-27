@@ -30,13 +30,13 @@ export default function RegisterScreen() {
   const { handleGoogleSignIn, isLoading: googleLoading } = useGoogleAuth();
 
   const handleRegister = async () => {
-    if (!email || !password) {
+    if (!email || !password || !name) {
       Alert.alert("Error", "Please fill all fields");
       return;
     }
     setLoading(true);
     try {
-      await signUp(email, password);
+      await signUp(email, password, name);
       router.replace("/(tabs)/home");
     } catch (error: any) {
       Alert.alert("Login Failed", error.message);

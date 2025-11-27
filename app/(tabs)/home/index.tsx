@@ -3,9 +3,11 @@ import ProjectCard from "@/components/home/ProjectCard";
 import TaskItem from "@/components/home/TaskItem";
 // Import data dummy yang baru
 import { PROJECTS_DATA } from "@/constants/projectsData";
+import { auth } from "@/firebaseConfig";
+import { onAuthStateChanged } from "@firebase/auth";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -16,7 +18,26 @@ import {
 
 export default function Home() {
   const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+  useEffect(() => {
+    // Parameter 'user' di sini adalah object User dari Firebase
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthChecked(true);
 
+      if (user) {
+        // --- DI SINI CARA DAPAT ID-NYA ---
+        const userId = user.uid;
+        console.log("User ID yang login:", userId);
+
+        // Redirect ke home
+        router.replace("/(tabs)/home");
+      } else {
+        router.replace("/auth/login");
+      }
+    });
+
+    return unsubscribe;
+  }, [router]);
   // 1. Mengambil semua task dari PROJECTS_DATA dan meratakannya (flatten)
   // serta mapping agar sesuai dengan props yang diharapkan TaskItem (misal: title -> name)
   const initialTasks = useMemo(() => {
