@@ -73,7 +73,7 @@ export default function ProjectDetailScreen() {
                 groupId={id}
                 projectId={projectId}
                 availableProjects={projects}
-                onBackPress={() => router.back()}
+                onBackPress={() => router.push(`/(tabs)/group/${id}`)}
             />
         );
     }
@@ -87,7 +87,7 @@ export default function ProjectDetailScreen() {
                 projectColor={project.color}
                 completedCount={completedCount}
                 totalCount={totalCount}
-                onBackPress={() => router.back()}
+                onBackPress={() => router.push(`/(tabs)/group/${id}`)}
             />
 
             <TaskList

@@ -14,6 +14,7 @@ import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ChatService, Message } from "@/services/chat.service";
 import { Timestamp } from "firebase/firestore";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function ChatTab() {
     const { id: groupId, userId, userName } = useLocalSearchParams();
