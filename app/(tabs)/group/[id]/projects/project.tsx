@@ -8,7 +8,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-
 export default function ProjectTab() {
     const { id, groupId } = useLocalSearchParams();
     const router = useRouter();
@@ -27,16 +26,15 @@ export default function ProjectTab() {
     const [filterCompleted, setFilterCompleted] = useState(false);
     const [filterPizzaParty, setFilterPizzaParty] = useState(false);
 
-    // PERUBAHAN UTAMA: Routing ke project-detail yang ada di parent folder
     const handleProjectPress = (projectId: number) => {
         const normalizedGroupId = Array.isArray(currentGroupId) ? currentGroupId[0] : (currentGroupId ?? '');
-        router.push({
-            pathname: `/group/[id]/projects/project-detail`,
-            params: { 
-                id: normalizedGroupId,
-                projectId: projectId
-            }
-        });
+        
+        console.log("=== Navigation Debug ===");
+        console.log("Group ID:", normalizedGroupId);
+        console.log("Project ID:", projectId);
+        console.log("Full path:", `/(tabs)/group/${normalizedGroupId}/projects/${projectId}`);
+
+        router.push(`/(tabs)/group/${normalizedGroupId}/projects/${projectId}`);
     };
 
     const filteredProjects = projects.filter(project => {
@@ -89,13 +87,16 @@ export default function ProjectTab() {
                 contentContainerStyle={styles.scrollContentNew}
                 showsVerticalScrollIndicator={false}
             >
-                {filteredProjects.map((project) => (
+                {filteredProjects.map((project) => {
+                    
+                    return(
                     <ProjectCard
                         key={project.id}
                         project={project}
                         onPress={handleProjectPress}
                     />
-                ))}
+                    )
+})}
 
                 {filteredProjects.length === 0 && (
                     <View style={styles.emptyState}>
