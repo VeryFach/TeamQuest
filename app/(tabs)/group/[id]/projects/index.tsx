@@ -2,19 +2,44 @@
 import FAB from "@/components/common/FAB";
 import AddProjectModal from "@/components/project/AddProjectModal";
 import ProjectCard from "@/components/project/ProjectCard";
-import { PROJECTS_DATA } from "@/data/projects";
-import { Project } from "@/data/types";
+import { PROJECTS_DATA, Project } from "@/constants/projectsData";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
+// Mapping group ID ke nama group
+const GROUP_NAMES: Record<string, string> = {
+    "1": "Team Produktif",
+    "2": "Private",
+    // Tambahkan group lain sesuai kebutuhan
+};
 
 export default function ProjectScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     
-    const groupId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id as string);
-    const projects: Project[] = PROJECTS_DATA[groupId] || [];
+    // Ambil group ID dari params
+    const groupId = Array.isArray(id) ? id[0] : (id as string);
+    const groupName = GROUP_NAMES[groupId] || "";
+    
+    console.log("=== Project Screen Debug ===");
+    console.log("Group ID:", groupId);
+    console.log("Group Name:", groupName);
+    
+    // Filter projects berdasarkan group name
+    // Jika group adalah "Private" (id: 2), tampilkan project tanpa group
+    // Jika group lain, filter berdasarkan nama group
+    const projects: Project[] = useMemo(() => {
+        if (groupId === "2") {
+            // Private - tampilkan project yang tidak punya group
+            return PROJECTS_DATA.filter(p => !p.group);
+        }
+        // Filter berdasarkan group name
+        return PROJECTS_DATA.filter(p => p.group === groupName);
+    }, [groupId, groupName]);
+    
+    console.log("Filtered projects:", projects.length);
     
     // State untuk modal
     const [modalVisible, setModalVisible] = useState(false);
@@ -29,7 +54,7 @@ export default function ProjectScreen() {
     const [filterCompleted, setFilterCompleted] = useState(false);
     const [filterPizzaParty, setFilterPizzaParty] = useState(false);
 
-    const handleProjectPress = (projectId: number) => {
+    const handleProjectPress = (projectId: string) => {
         console.log("=== Navigation Debug ===");
         console.log("Group ID:", groupId);
         console.log("Project ID:", projectId);
@@ -38,11 +63,19 @@ export default function ProjectScreen() {
         router.push(`/(tabs)/group/${groupId}/projects/${projectId}`);
     };
 
-    const filteredProjects = projects.filter(project => {
-        if (filterCompleted && project.tasks.every((t: any) => t.completed)) return false;
-        if (filterPizzaParty && !project.subtitle.includes('Pizza')) return false;
-        return true;
-    });
+    const filteredProjects = useMemo(() => {
+        return projects.filter(project => {
+            // Filter: Uncompleted - sembunyikan yang sudah selesai semua
+            if (filterCompleted && project.tasks.every(t => t.completed)) {
+                return false;
+            }
+            // Filter: Pizza Party - hanya tampilkan yang subtitle mengandung "Pizza"
+            if (filterPizzaParty && !project.subtitle.toLowerCase().includes('pizza')) {
+                return false;
+            }
+            return true;
+        });
+    }, [projects, filterCompleted, filterPizzaParty]);
 
     const handleClearFilters = () => {
         setFilterCompleted(false);
@@ -106,7 +139,7 @@ export default function ProjectScreen() {
                     <ProjectCard
                         key={project.id}
                         project={project}
-                        onPress={handleProjectPress}
+                        onPress={() => handleProjectPress(project.id)}
                     />
                 ))}
 

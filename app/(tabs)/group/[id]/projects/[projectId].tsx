@@ -3,22 +3,13 @@ import { TaskInput } from "@/components/project/Project_Id";
 import ProjectErrorView from "@/components/project/Project_Id/ProjectErrorView";
 import ProjectHeader from "@/components/project/Project_Id/ProjectHeader";
 import TaskList from "@/components/project/Project_Id/TaskList";
-import { PROJECTS_DATA } from "@/data/projects";
 import { GroupService } from "@/services/group.service";
+import { Project, ProjectService } from "@/services/project.service";
 import { Task, TaskService } from "@/services/task.service";
 import { UserService } from "@/services/user.service";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-
-type Project = {
-  id: number;
-  name: string;
-  subtitle: string;
-  color: string;
-  emoji: string;
-  tasks: Task[];
-};
 
 export interface Member {
   id: string;
@@ -32,25 +23,22 @@ export default function ProjectDetailScreen() {
   }>();
   const router = useRouter();
 
-  // Ambil data projects berdasarkan groupId
-  const projects: Project[] = PROJECTS_DATA[Number(id)] || [];
-
-  // Cari project berdasarkan projectId
-  const project: Project | undefined = projects.find(
-    (p) => p.id === Number(projectId)
-  );
-
-  // State untuk tasks
+  // State untuk project, tasks, dan members
+  const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch tasks dan members dari Firebase
+  // Fetch project, tasks dan members dari Firebase
   useEffect(() => {
     const fetchData = async () => {
       if (projectId && id) {
         try {
           setLoading(true);
+
+          // Fetch project
+          const fetchedProject = await ProjectService.getProject(projectId);
+          setProject(fetchedProject);
 
           // Fetch tasks
           const fetchedTasks = await TaskService.getTasks(projectId);
@@ -142,18 +130,6 @@ export default function ProjectDetailScreen() {
   const completedCount = tasks.filter((t) => t.isDone).length;
   const totalCount = tasks.length;
 
-  // Jika project tidak ditemukan
-  if (!project) {
-    return (
-      <ProjectErrorView
-        groupId={id}
-        projectId={projectId}
-        availableProjects={projects}
-        onBackPress={() => router.push(`/(tabs)/group/${id}`)}
-      />
-    );
-  }
-
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -162,13 +138,23 @@ export default function ProjectDetailScreen() {
     );
   }
 
+  // Jika project tidak ditemukan
+  if (!project) {
+    return (
+      <ProjectErrorView
+        groupId={id}
+        projectId={projectId}
+        onBackPress={() => router.push(`/(tabs)/group/${id}`)}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ProjectHeader
         projectName={project.name}
-        projectSubtitle={project.subtitle}
-        projectEmoji={project.emoji}
-        projectColor={project.color}
+        projectEmoji={project.reward.icon}
+        projectColor={project.bgColor}
         completedCount={completedCount}
         totalCount={totalCount}
         onBackPress={() => router.push(`/(tabs)/group/${id}`)}
