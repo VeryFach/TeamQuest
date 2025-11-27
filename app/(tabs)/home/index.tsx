@@ -4,9 +4,9 @@ import TaskItem from "@/components/home/TaskItem";
 // Import data dummy yang baru
 import { PROJECTS_DATA } from "@/constants/projectsData";
 import { auth } from "@/firebaseConfig";
-import { onAuthStateChanged } from "@firebase/auth";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
+import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useMemo, useState } from "react";
 import {
   ScrollView,

@@ -1,132 +1,196 @@
 // app/(tabs)/group/[id]/projects/index.tsx
-import FAB from "@/components/common/FAB";
-import AddProjectModal from "@/components/project/AddProjectModal";
-import ProjectCard from "@/components/project/ProjectCard";
-import { PROJECTS_DATA, Project } from "@/constants/projectsData";
-import { Ionicons } from "@expo/vector-icons";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState, useMemo } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-// Mapping group ID ke nama group
-const GROUP_NAMES: Record<string, string> = {
-    "1": "Team Produktif",
-    "2": "Private",
-    // Tambahkan group lain sesuai kebutuhan
-};
+import FAB from "@/components/common/FAB";
+import AddProjectModal, { ProjectFormData } from "@/components/project/AddProjectModal";
+import ProjectCard from "@/components/project/ProjectCard";
+import { ProjectService, Project } from "@/services/project.service";
+import { UserService, User } from "@/services/user.service";
+import { GroupService } from "@/services/group.service";
+import { auth } from "@/firebaseConfig";
 
 export default function ProjectScreen() {
-    const { id } = useLocalSearchParams();
+    const { id, groupId: paramGroupId } = useLocalSearchParams();
     const router = useRouter();
+    const user = auth.currentUser;
     
     // Ambil group ID dari params
-    const groupId = Array.isArray(id) ? id[0] : (id as string);
-    const groupName = GROUP_NAMES[groupId] || "";
+    const groupId = paramGroupId 
+        ? (Array.isArray(paramGroupId) ? paramGroupId[0] : paramGroupId)
+        : (Array.isArray(id) ? id[0] : (id as string));
     
-    console.log("=== Project Screen Debug ===");
-    console.log("Group ID:", groupId);
-    console.log("Group Name:", groupName);
-    
-    // Filter projects berdasarkan group name
-    // Jika group adalah "Private" (id: 2), tampilkan project tanpa group
-    // Jika group lain, filter berdasarkan nama group
-    const projects: Project[] = useMemo(() => {
-        if (groupId === "2") {
-            // Private - tampilkan project yang tidak punya group
-            return PROJECTS_DATA.filter(p => !p.group);
-        }
-        // Filter berdasarkan group name
-        return PROJECTS_DATA.filter(p => p.group === groupName);
-    }, [groupId, groupName]);
-    
-    console.log("Filtered projects:", projects.length);
-    
-    // State untuk modal
+    // State
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [members, setMembers] = useState<User[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
-    const [projectName, setProjectName] = useState('');
-    const [projectReward, setProjectReward] = useState('');
-    const [iconReward, setIconReward] = useState('');
-    const [tasks, setTasks] = useState<Array<{ name: string, assignee: string }>>([
-        { name: '', assignee: 'Raka' }
-    ]);
     
     // State untuk filter
     const [filterCompleted, setFilterCompleted] = useState(false);
-    const [filterPizzaParty, setFilterPizzaParty] = useState(false);
+    const [filterByReward, setFilterByReward] = useState<string | null>(null);
+
+    // Fetch data dari Firebase
+    const fetchData = useCallback(async () => {
+        if (!groupId) {
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            // Ambil projects dari grup ini
+            const groupProjects = await ProjectService.getGroupProjects(groupId);
+            setProjects(groupProjects);
+
+            // Ambil data grup untuk mendapatkan members
+            const groupData = await GroupService.getGroup(groupId);
+            if (groupData) {
+                const membersData = await UserService.getUsersByIds(groupData.members);
+                setMembers(membersData);
+            }
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [groupId]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    // Handle create project
+    const handleSubmitProject = async (formData: ProjectFormData) => {
+        if (!user?.uid || !groupId) {
+            Alert.alert("Error", "You must be logged in to create a project");
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const projectData = {
+                name: formData.projectName,
+                bgColor: formData.bgColor,
+                groupId: groupId,
+                isPrivate: false,
+                projectLeader: user.uid,
+                reward: {
+                    icon: formData.iconReward,
+                    name: formData.projectReward,
+                },
+            };
+
+            const newProject = await ProjectService.createProject(projectData);
+            console.log("Project created:", newProject);
+
+            // TODO: Jika ada task service, simpan tasks juga
+            // for (const task of formData.tasks) {
+            //     await TaskService.createTask({
+            //         projectId: newProject.projectId,
+            //         name: task.name,
+            //         assigneeId: task.assigneeId,
+            //     });
+            // }
+
+            // Refresh data
+            await fetchData();
+
+            Alert.alert(
+                "Success! 🎉",
+                `Project "${formData.projectName}" has been created.`,
+                [{ text: "OK" }]
+            );
+
+            setModalVisible(false);
+        } catch (error) {
+            console.error("Error creating project:", error);
+            Alert.alert("Error", "Failed to create project. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleProjectPress = (projectId: string) => {
-        console.log("=== Navigation Debug ===");
-        console.log("Group ID:", groupId);
-        console.log("Project ID:", projectId);
-        
-        // Navigasi ke [projectId].tsx
         router.push(`/(tabs)/group/${groupId}/projects/${projectId}`);
     };
 
+    // Get unique rewards for filter
+    const uniqueRewards = useMemo(() => {
+        const rewards = projects.map(p => p.reward.name).filter(Boolean);
+        return [...new Set(rewards)];
+    }, [projects]);
+
+    // Filter projects
     const filteredProjects = useMemo(() => {
         return projects.filter(project => {
-            // Filter: Uncompleted - sembunyikan yang sudah selesai semua
-            if (filterCompleted && project.tasks.every(t => t.completed)) {
-                return false;
-            }
-            // Filter: Pizza Party - hanya tampilkan yang subtitle mengandung "Pizza"
-            if (filterPizzaParty && !project.subtitle.toLowerCase().includes('pizza')) {
+            // Filter by reward
+            if (filterByReward && project.reward.name !== filterByReward) {
                 return false;
             }
             return true;
         });
-    }, [projects, filterCompleted, filterPizzaParty]);
+    }, [projects, filterByReward]);
 
     const handleClearFilters = () => {
         setFilterCompleted(false);
-        setFilterPizzaParty(false);
+        setFilterByReward(null);
     };
 
-    const handleSubmitProject = () => {
-        console.log("Submit project:", {
-            projectName,
-            projectReward,
-            iconReward,
-            tasks
-        });
-        // Reset form
-        setProjectName('');
-        setProjectReward('');
-        setIconReward('');
-        setTasks([{ name: '', assignee: 'Raka' }]);
-        setModalVisible(false);
-    };
+    // Loading state
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#C8733B" />
+                <Text style={styles.loadingText}>Loading projects...</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
             {/* Filter Section */}
             <View style={styles.filterContainer}>
-                <TouchableOpacity
-                    style={[styles.filterChip, filterCompleted && styles.filterChipActive]}
-                    onPress={() => setFilterCompleted(!filterCompleted)}
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterScroll}
                 >
-                    <Text style={[styles.filterText, filterCompleted && styles.filterTextActive]}>
-                        Uncompleted
-                    </Text>
-                    {filterCompleted && <Ionicons name="close-circle" size={16} color="#C8733B" />}
-                </TouchableOpacity>
+                    {uniqueRewards.map((reward) => (
+                        <TouchableOpacity
+                            key={reward}
+                            style={[
+                                styles.filterChip, 
+                                filterByReward === reward && styles.filterChipActive
+                            ]}
+                            onPress={() => setFilterByReward(
+                                filterByReward === reward ? null : reward
+                            )}
+                        >
+                            <Text style={[
+                                styles.filterText, 
+                                filterByReward === reward && styles.filterTextActive
+                            ]}>
+                                {reward}
+                            </Text>
+                            {filterByReward === reward && (
+                                <Ionicons name="close-circle" size={16} color="#C8733B" />
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
 
-                <TouchableOpacity
-                    style={[styles.filterChip, filterPizzaParty && styles.filterChipActive]}
-                    onPress={() => setFilterPizzaParty(!filterPizzaParty)}
-                >
-                    <Text style={[styles.filterText, filterPizzaParty && styles.filterTextActive]}>
-                        Pizza Party
-                    </Text>
-                    {filterPizzaParty && <Ionicons name="close-circle" size={16} color="#C8733B" />}
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                    style={styles.clearFilters}
-                    onPress={handleClearFilters}
-                >
-                    <Text style={styles.clearFiltersText}>Clear filters</Text>
-                </TouchableOpacity>
+                {filterByReward && (
+                    <TouchableOpacity 
+                        style={styles.clearFilters}
+                        onPress={handleClearFilters}
+                    >
+                        <Text style={styles.clearFiltersText}>Clear</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             {/* Project List */}
@@ -136,17 +200,29 @@ export default function ProjectScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {filteredProjects.map((project) => (
-                    <ProjectCard
-                        key={project.id}
-                        project={project}
-                        onPress={() => handleProjectPress(project.id)}
-                    />
+                    <TouchableOpacity
+                        key={project.projectId}
+                        style={[styles.projectCard, { backgroundColor: project.bgColor }]}
+                        onPress={() => handleProjectPress(project.projectId)}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.projectHeader}>
+                            <Text style={styles.projectIcon}>{project.reward.icon}</Text>
+                            <View style={styles.projectInfo}>
+                                <Text style={styles.projectName}>{project.name}</Text>
+                                <Text style={styles.projectReward}>{project.reward.name}</Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
                 ))}
 
                 {filteredProjects.length === 0 && (
                     <View style={styles.emptyState}>
                         <Ionicons name="folder-open-outline" size={64} color="#ccc" />
                         <Text style={styles.emptyText}>No projects found</Text>
+                        <Text style={styles.emptySubtext}>
+                            Tap the + button to create a new project
+                        </Text>
                     </View>
                 )}
             </ScrollView>
@@ -159,14 +235,8 @@ export default function ProjectScreen() {
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
                 onSubmit={handleSubmitProject}
-                projectName={projectName}
-                setProjectName={setProjectName}
-                projectReward={projectReward}
-                setProjectReward={setProjectReward}
-                iconReward={iconReward}
-                setIconReward={setIconReward}
-                tasks={tasks}
-                setTasks={setTasks}
+                members={members}
+                isLoading={isSubmitting}
             />
         </View>
     );
@@ -177,11 +247,25 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f4e4c1',
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f4e4c1',
+        gap: 12,
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#666',
+    },
     filterContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 12,
+    },
+    filterScroll: {
+        flexDirection: 'row',
         gap: 8,
     },
     filterChip: {
@@ -207,7 +291,9 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     clearFilters: {
-        marginLeft: 'auto',
+        marginLeft: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
     },
     clearFiltersText: {
         fontSize: 14,
@@ -218,8 +304,39 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingVertical: 20,
+        paddingHorizontal: 20,
         paddingBottom: 100,
+        gap: 16,
+    },
+    projectCard: {
+        borderRadius: 16,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    projectHeader: {
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 16,
+    },
+    projectIcon: {
+        fontSize: 48,
+    },
+    projectInfo: {
+        flex: 1,
+    },
+    projectName: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 4,
+    },
+    projectReward: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.8)',
     },
     emptyState: {
         alignItems: 'center',
@@ -227,8 +344,14 @@ const styles = StyleSheet.create({
         paddingVertical: 60,
     },
     emptyText: {
-        fontSize: 16,
+        fontSize: 18,
+        fontWeight: '600',
         color: '#999',
         marginTop: 16,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: '#bbb',
+        marginTop: 8,
     },
 });

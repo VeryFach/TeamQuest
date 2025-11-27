@@ -12,14 +12,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-
-export interface Group {
-  id: string;
-  name: string;
-  bgColor: string;
-  leaderId: string;
-  members: string[];
-}
+import { Group } from "@/types/group";
 
 export const GroupService = {
   async createGroup(data: Omit<Group, "id">) {
