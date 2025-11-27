@@ -1,9 +1,12 @@
 import CustomButton from "@/components/auth/CustomButton";
 import CustomInput from "@/components/auth/CustomInput";
+import { useGoogleAuth } from "@/hooks/googleAuth";
+import { signUp } from "@/services/auth.service";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -20,15 +23,38 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
-  const handleRegister = () => {
-    console.log("Registering:", { name, email, password });
+  const { handleGoogleSignIn, isLoading: googleLoading } = useGoogleAuth();
+
+  const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill all fields");
+      return;
+    }
+    setLoading(true);
+    try {
+      await signUp(email, password);
+      router.replace("/(tabs)/home");
+    } catch (error: any) {
+      Alert.alert("Login Failed", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleRegister = () => {
-    console.log("Google Sign In Clicked");
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      await handleGoogleSignIn();
+      router.replace("/(tabs)/home");
+    } catch (error: any) {
+      Alert.alert("Google Login Failed", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,7 +120,8 @@ export default function RegisterScreen() {
           <CustomButton
             title="Sign up with Google"
             variant="google"
-            onPress={handleGoogleRegister}
+            onPress={handleGoogle}
+            loading={loading}
           />
 
           {/* Footer Text */}
