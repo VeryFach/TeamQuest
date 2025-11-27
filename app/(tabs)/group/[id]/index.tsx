@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import ProjectScreen from './projects/index';
@@ -28,11 +28,9 @@ export default function GroupDetailLayout() {
             }
 
             try {
-                // Ambil data grup
                 const groupData = await GroupService.getGroup(id);
                 setGroup(groupData);
 
-                // Ambil data members jika grup ditemukan
                 if (groupData) {
                     const membersData = await UserService.getUsersByIds(groupData.members);
                     setMembers(membersData);
@@ -76,7 +74,6 @@ export default function GroupDetailLayout() {
         );
     }
 
-    // Helper untuk mendapatkan inisial nama grup
     const getGroupInitials = (name: string) => {
         return name
             .split(' ')
@@ -110,7 +107,6 @@ export default function GroupDetailLayout() {
                         {members.length} {members.length === 1 ? 'Member' : 'Members'}
                     </Text>
                     
-                    {/* Member avatars preview */}
                     <View style={styles.memberAvatars}>
                         {members.slice(0, 5).map((member, index) => (
                             <View 
@@ -136,7 +132,7 @@ export default function GroupDetailLayout() {
                 </View>
             </View>
 
-            {/* Material Top Tabs */}
+            {/* Material Top Tabs - Pass groupId to screens */}
             <Tab.Navigator
                 screenOptions={{
                     tabBarStyle: styles.tabBar,
