@@ -1,5 +1,6 @@
 import { Text, View, StyleSheet, TouchableOpacity, ImageBackground } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from "@expo/vector-icons";
 
 interface TeamCardProps {
     title: string;
@@ -18,7 +19,7 @@ export default function TeamCard({ title, members, projects, onPress }: TeamCard
                 imageStyle={styles.cardBackgroundImage}
             >
                 <LinearGradient
-                    colors={['rgba(0,0,0,0)', 'rgba(119,65,0,1)']}
+                    colors={['rgba(0,0,0,0.4)', 'rgba(119,65,0,0.8)']}
                     locations={[0, 1]}
                     style={styles.cardGradient}
                 >
@@ -26,12 +27,16 @@ export default function TeamCard({ title, members, projects, onPress }: TeamCard
 
                     <View style={styles.cardInfo}>
                         <Text style={styles.cardLabel}>Projects:</Text>
-                        {projects.map((project, index) => (
-                            <Text key={index} style={styles.cardProject}>{project}</Text>
-                        ))}
+                        <Text style={styles.cardProject}>
+                            {projects.join(', ')}
+                        </Text>
 
                         <View style={styles.membersRow}>
-                            <Text style={styles.memberIcon}>👥</Text>
+                            <Ionicons
+                                    name="people"
+                                    size={16}
+                                    color="#ffffffff"
+                            />
                             <Text style={styles.cardMembers}>{members.length} Members</Text>
                         </View>
                     </View>
@@ -61,30 +66,42 @@ const styles = StyleSheet.create({
     cardBackgroundImage: {
         borderRadius: 16,
     },
+    // Make the gradient container relative so children can be absolutely positioned
     cardGradient: {
         flex: 1,
         padding: 20,
-        justifyContent: 'space-between',
+        position: 'relative',
     },
+    // Position title at the top with explicit top offset
     cardTitle: {
-        fontSize: 22,
-        fontWeight: '700',
+        position: 'absolute',
+        top: 80,
+        left: 20,
+        right: 20,
+        fontSize: 26,
+        fontWeight: '900',
         color: '#fff',
         textShadowColor: 'rgba(0, 0, 0, 0.5)',
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 3,
     },
+    // Position info block at the bottom with explicit bottom offset
     cardInfo: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+        // keep small spacing between children; if gap isn't supported, use margins on children
         gap: 4,
     },
     cardLabel: {
-        fontSize: 13,
+        fontSize: 18,
         color: '#fff',
         opacity: 0.9,
         fontWeight: '500',
     },
     cardProject: {
-        fontSize: 13,
+        fontSize: 18,
         color: '#fff',
         opacity: 0.85,
     },
@@ -98,7 +115,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     cardMembers: {
-        fontSize: 13,
+        fontSize: 15,
         color: '#fff',
         fontWeight: '500',
     },
