@@ -1,15 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import dotenv from "dotenv";
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
   getReactNativePersistence,
-  initializeAuth
+  initializeAuth,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { Platform } from "react-native";
-
-dotenv.config();
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -25,9 +22,10 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 
 // Initialize Auth with platform-specific persistence
-export const auth = Platform.OS === "web"
-  ? getAuth(app)
-  : initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
+export const auth =
+  Platform.OS === "web"
+    ? getAuth(app)
+    : initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
 export const db = getFirestore(app);
