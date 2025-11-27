@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import TeamCard from "@/components/group/TeamCard";
 import FAB from "@/components/common/FAB";
+import { JSX } from "react/jsx-runtime";
 
 interface Team {
   id: number;
@@ -75,7 +76,6 @@ export default function GroupScreen(): JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4e4c1',
   },
   header: {
     paddingTop: 20,
