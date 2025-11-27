@@ -1,11 +1,12 @@
 // app/group/[id]/projects/project.tsx
 import FAB from "@/components/common/FAB";
 import AddProjectModal from "@/components/project/AddProjectModal";
+import ProjectCard from "@/components/project/ProjectCard";
+import { PROJECTS_DATA } from "@/data/projects";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { PROJECTS_DATA } from "@/data/projects";
 
 
 export default function ProjectTab() {
@@ -49,9 +50,7 @@ export default function ProjectTab() {
         setFilterPizzaParty(false);
     };
 
-    const getCompletedCount = (tasks: any[]) => {
-        return tasks.filter(t => t.completed).length;
-    };
+
 
     return (
         <View style={styles.container}>
@@ -87,36 +86,16 @@ export default function ProjectTab() {
 
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={styles.scrollContentNew}
                 showsVerticalScrollIndicator={false}
             >
-                {filteredProjects.map((project) => {
-                    const completedCount = getCompletedCount(project.tasks);
-                    const totalCount = project.tasks.length;
-                    
-                    return (
-                        <TouchableOpacity
-                            key={project.id}
-                            style={[styles.projectCard, { backgroundColor: project.color }]}
-                            onPress={() => handleProjectPress(project.id)}
-                        >
-                            <View style={styles.emojiContainer}>
-                                <Text style={styles.emoji}>{project.emoji}</Text>
-                            </View>
-
-                            <View style={styles.projectContent}>
-                                <Text style={styles.projectName}>{project.name}</Text>
-                                <Text style={styles.projectSubtitle}>{project.subtitle}</Text>
-
-                                <View style={styles.tasksInfo}>
-                                    <Text style={styles.tasksText}>
-                                        {completedCount}/{totalCount} Tasks
-                                    </Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    );
-                })}
+                {filteredProjects.map((project) => (
+                    <ProjectCard
+                        key={project.id}
+                        project={project}
+                        onPress={handleProjectPress}
+                    />
+                ))}
 
                 {filteredProjects.length === 0 && (
                     <View style={styles.emptyState}>
@@ -198,46 +177,9 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingBottom: 100,
     },
-    projectCard: {
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 16,
-        minHeight: 160,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    emojiContainer: {
-        marginBottom: 12,
-    },
-    emoji: {
-        fontSize: 48,
-    },
-    projectContent: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    projectName: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 4,
-    },
-    projectSubtitle: {
-        fontSize: 16,
-        color: '#fff',
-        opacity: 0.9,
-        marginBottom: 12,
-    },
-    tasksInfo: {
-        alignSelf: 'flex-end',
-    },
-    tasksText: {
-        fontSize: 14,
-        color: '#fff',
-        fontWeight: '600',
+    scrollContentNew: {
+        paddingVertical: 20,
+        paddingBottom: 100,
     },
     emptyState: {
         alignItems: 'center',
