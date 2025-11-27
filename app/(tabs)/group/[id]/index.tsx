@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import ProjectScreen from './projects/project';
+import ProjectScreen from './projects/index';
 import ChatScreen from './chat/chat';
 
 const Tab = createMaterialTopTabNavigator();

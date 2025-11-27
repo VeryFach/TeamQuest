@@ -1,21 +1,22 @@
-// app/group/[id]/projects/project.tsx
+// app/(tabs)/group/[id]/projects/index.tsx
 import FAB from "@/components/common/FAB";
 import AddProjectModal from "@/components/project/AddProjectModal";
 import ProjectCard from "@/components/project/ProjectCard";
 import { PROJECTS_DATA } from "@/data/projects";
+import { Project } from "@/data/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-export default function ProjectTab() {
-    const { id, groupId } = useLocalSearchParams();
+export default function ProjectScreen() {
+    const { id } = useLocalSearchParams();
     const router = useRouter();
     
-    // Gunakan groupId dari params jika ada, fallback ke id
-    const currentGroupId = groupId || id;
-    const projects = PROJECTS_DATA[Number(currentGroupId)] || [];
+    const groupId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id as string);
+    const projects: Project[] = PROJECTS_DATA[groupId] || [];
     
+    // State untuk modal
     const [modalVisible, setModalVisible] = useState(false);
     const [projectName, setProjectName] = useState('');
     const [projectReward, setProjectReward] = useState('');
@@ -23,18 +24,18 @@ export default function ProjectTab() {
     const [tasks, setTasks] = useState<Array<{ name: string, assignee: string }>>([
         { name: '', assignee: 'Raka' }
     ]);
+    
+    // State untuk filter
     const [filterCompleted, setFilterCompleted] = useState(false);
     const [filterPizzaParty, setFilterPizzaParty] = useState(false);
 
     const handleProjectPress = (projectId: number) => {
-        const normalizedGroupId = Array.isArray(currentGroupId) ? currentGroupId[0] : (currentGroupId ?? '');
-        
         console.log("=== Navigation Debug ===");
-        console.log("Group ID:", normalizedGroupId);
+        console.log("Group ID:", groupId);
         console.log("Project ID:", projectId);
-        console.log("Full path:", `/(tabs)/group/${normalizedGroupId}/projects/${projectId}`);
-
-        router.push(`/(tabs)/group/${normalizedGroupId}/projects/${projectId}`);
+        
+        // Navigasi ke [projectId].tsx
+        router.push(`/(tabs)/group/${groupId}/projects/${projectId}`);
     };
 
     const filteredProjects = projects.filter(project => {
@@ -48,7 +49,20 @@ export default function ProjectTab() {
         setFilterPizzaParty(false);
     };
 
-
+    const handleSubmitProject = () => {
+        console.log("Submit project:", {
+            projectName,
+            projectReward,
+            iconReward,
+            tasks
+        });
+        // Reset form
+        setProjectName('');
+        setProjectReward('');
+        setIconReward('');
+        setTasks([{ name: '', assignee: 'Raka' }]);
+        setModalVisible(false);
+    };
 
     return (
         <View style={styles.container}>
@@ -82,21 +96,19 @@ export default function ProjectTab() {
                 </TouchableOpacity>
             </View>
 
+            {/* Project List */}
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={styles.scrollContentNew}
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {filteredProjects.map((project) => {
-                    
-                    return(
+                {filteredProjects.map((project) => (
                     <ProjectCard
                         key={project.id}
                         project={project}
                         onPress={handleProjectPress}
                     />
-                    )
-})}
+                ))}
 
                 {filteredProjects.length === 0 && (
                     <View style={styles.emptyState}>
@@ -106,17 +118,14 @@ export default function ProjectTab() {
                 )}
             </ScrollView>
 
-            {/* Add Project Button */}
+            {/* FAB Button */}
             <FAB onPress={() => setModalVisible(true)} />
 
             {/* Add Project Modal */}
             <AddProjectModal
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
-                onSubmit={() => {
-                    console.log("Submit project!");
-                    setModalVisible(false);
-                }}
+                onSubmit={handleSubmitProject}
                 projectName={projectName}
                 setProjectName={setProjectName}
                 projectReward={projectReward}
@@ -175,12 +184,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 20,
-        paddingBottom: 100,
-    },
-    scrollContentNew: {
         paddingVertical: 20,
         paddingBottom: 100,
+        alignItems: 'center',
     },
     emptyState: {
         alignItems: 'center',
