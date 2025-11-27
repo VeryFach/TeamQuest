@@ -69,11 +69,9 @@ export default function LoginScreen() {
           <View style={styles.headerContainer}>
             {/* Ganti dengan logo lokal: require('../assets/logo.png') */}
             <Image
-              source={{
-                uri: "https://cdn-icons-png.flaticon.com/512/2921/2921226.png",
-              }}
+              source={require("@/assets/icons/splash-icon-dark.png")}
               style={styles.logo}
-              resizeMode="contain"
+              resizeMode="center"
             />
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Login to continue</Text>
@@ -154,9 +152,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 20,
+    width: 250,
+    height: 250,
   },
   title: {
     fontSize: 24,

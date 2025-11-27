@@ -47,10 +47,14 @@ export const signInWithGoogle = async (idToken: string) => {
 };
 
 // Sign Out
-export const signOutUser = async () => {
+export const signOutUser = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
   try {
     await firebaseSignOut(auth);
+    return { success: true, message: "Sign out berhasil." };
   } catch (error: any) {
-    throw new Error(error.message);
+    return { success: false, message: error.message || "Sign out gagal." };
   }
 };
