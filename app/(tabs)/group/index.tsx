@@ -1,3 +1,4 @@
+// app/(tabs)/group/index.tsx
 import { Text, View, StyleSheet, ScrollView, TouchableOpacity, ImageBackground } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from "expo-router";

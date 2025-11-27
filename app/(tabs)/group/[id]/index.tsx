@@ -1,3 +1,4 @@
+// app/(tabs)/group/[id]/index.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,9 +41,6 @@ export default function GroupDetailLayout() {
             </View>
         );
     }
-
-    // Pass groupId to screens via initialParams on the Tab.Screen components below
-    // (removed inline wrapper components to avoid JSX prop type errors)
 
     return (
         <View style={styles.container}>

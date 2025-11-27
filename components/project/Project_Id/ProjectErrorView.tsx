@@ -2,15 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-type Project = {
-    id: number;
-    name: string;
-    subtitle: string;
-    color: string;
-    emoji: string;
-    tasks: any[];
-};
+import type { Project } from "@/constants/projectsData";
 
 type ProjectErrorViewProps = {
     groupId: string | undefined;
@@ -44,7 +36,7 @@ export default function ProjectErrorView({
                         <Text style={styles.errorSubtitle}>Available project IDs:</Text>
                         {availableProjects.map(p => (
                             <Text key={p.id} style={styles.errorText}>
-                                ID: {p.id} - {p.name}
+                                ID: {p.id} - {p.title}
                             </Text>
                         ))}
                     </View>

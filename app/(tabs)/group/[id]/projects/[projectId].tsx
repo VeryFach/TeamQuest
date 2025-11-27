@@ -1,5 +1,4 @@
-// app/(tabs)/group/[id]/projects/[projectId].tsx
-import { PROJECTS_DATA } from '@/data/projects';
+import { PROJECTS_DATA } from '@/constants/projectsData';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
@@ -7,58 +6,37 @@ import ProjectHeader from "@/components/project/Project_Id/ProjectHeader";
 import TaskList from "@/components/project/Project_Id/TaskList";
 import ProjectErrorView from "@/components/project/Project_Id/ProjectErrorView";
 
-type Task = {
-    id: number;
-    name: string;
-    assignee: string;
-    dueDate: string;
-    priority: string;
-    completed: boolean;
-};
-
-type Project = {
-    id: number;
-    name: string;
-    subtitle: string;
-    color: string;
-    emoji: string;
-    tasks: Task[];
-};
+import type { Project, Task } from "@/constants/projectsData";
 
 export default function ProjectDetailScreen() {
-    // Params dari dynamic route: [id] dan [projectId]
     const { id, projectId } = useLocalSearchParams<{ id: string; projectId: string }>();
     const router = useRouter();
-    
-    // Debug
-    console.log("=== Project Detail Params ===");
-    console.log("Group ID (id):", id);
-    console.log("Project ID (projectId):", projectId);
-    
-    // Ambil data projects berdasarkan groupId
-    const projects: Project[] = PROJECTS_DATA[Number(id)] || [];
-    console.log(`Projects for group ${id}:`, projects.length, "projects found");
-    
-    // Cari project berdasarkan projectId
-    const project: Project | undefined = projects.find(p => p.id === Number(projectId));
-    console.log(`Looking for project ${projectId}:`, project ? `Found: ${project.name}` : "Not found");
-    
-    // State untuk tasks
+
+    console.log("=== Project Detail Params ===", { id, projectId });
+
+    // 1️⃣ Cari project berdasarkan projectId (karena data sudah flat, bukan array per group)
+    const project: Project | undefined = PROJECTS_DATA.find(
+        (p) => p.id === projectId
+    );
+
+    console.log(`Project lookup:`, project ? `Found ${project.title}` : "Not found");
+
+    // 2️⃣ Filter project lain yang memiliki group sama → untuk error view fallback
+    const relatedProjects = project?.group
+        ? PROJECTS_DATA.filter((p) => p.group === project.group)
+        : [];
+
+    // 3️⃣ State untuk tasks
     const [tasks, setTasks] = useState<Task[]>([]);
 
-    // Update tasks ketika project ditemukan
     useEffect(() => {
-        if (project?.tasks) {
-            setTasks(project.tasks);
-        }
+        if (project?.tasks) setTasks(project.tasks);
     }, [project]);
 
-    const toggleTaskCompletion = (taskId: number) => {
-        setTasks(prevTasks =>
-            prevTasks.map((task: Task) =>
-                task.id === taskId
-                    ? { ...task, completed: !task.completed }
-                    : task
+    const toggleTaskCompletion = (taskId: string) => {
+        setTasks((prev) =>
+            prev.map((task) =>
+                task.id === taskId ? { ...task, completed: !task.completed } : task
             )
         );
     };
@@ -66,25 +44,26 @@ export default function ProjectDetailScreen() {
     const completedCount = tasks.filter(t => t.completed).length;
     const totalCount = tasks.length;
 
-    // Jika project tidak ditemukan
+    // 4️⃣ Jika project tidak ditemukan → tampilkan error view
     if (!project) {
         return (
             <ProjectErrorView
                 groupId={id}
                 projectId={projectId}
-                availableProjects={projects}
+                availableProjects={relatedProjects}
                 onBackPress={() => router.push(`/(tabs)/group/${id}`)}
             />
         );
     }
 
+    // 5️⃣ Jika project ditemukan → tampilkan siap
     return (
         <View style={styles.container}>
             <ProjectHeader
-                projectName={project.name}
+                projectName={project.title}
                 projectSubtitle={project.subtitle}
                 projectEmoji={project.emoji}
-                projectColor={project.color}
+                projectColor={project.bgColor}
                 completedCount={completedCount}
                 totalCount={totalCount}
                 onBackPress={() => router.push(`/(tabs)/group/${id}`)}
