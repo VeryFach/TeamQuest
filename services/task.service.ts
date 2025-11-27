@@ -12,19 +12,19 @@ import {
 import { db } from "../firebaseConfig";
 
 export interface Task {
-  taskId: string;
-  projectId: string;
+  id: string;
   taskName: string;
-  assignedTo: string | null;
+  projectId: string;
+  assignedTo: string;
   isDone: boolean;
-  createdAt: any; // bisa pakai Timestamp dari firebase/firestore jika ingin lebih spesifik
+  createdAt: any;
 }
 
 export const TaskService = {
-  async createTask(data: Omit<Task, "taskId" | "createdAt">) {
+  async createTask(data: Omit<Task, "id" | "createdAt">) {
     const ref = doc(collection(db, "tasks"));
     const newData: Task = {
-      taskId: ref.id,
+      id: ref.id,
       ...data,
       createdAt: serverTimestamp(),
     };
@@ -38,7 +38,23 @@ export const TaskService = {
       where("projectId", "==", projectId)
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => d.data());
+    return snap.docs.map((d) => d.data() as Task);
+  },
+
+  async getUserTasks(userId: string) {
+    const q = query(collection(db, "tasks"), where("assignedTo", "==", userId));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data() as Task);
+  },
+
+  async getIncompleteTasks(projectId: string) {
+    const q = query(
+      collection(db, "tasks"),
+      where("projectId", "==", projectId),
+      where("isDone", "==", false)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data() as Task);
   },
 
   async updateTask(taskId: string, data: Partial<Task>) {

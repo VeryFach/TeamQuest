@@ -1,18 +1,24 @@
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
 export interface Group {
   id: string;
   name: string;
+  bgColor: string;
   leaderId: string;
-  members: string[]; // userId list
+  members: string[];
 }
 
 export const GroupService = {
@@ -29,37 +35,48 @@ export const GroupService = {
   async getGroup(groupId: string) {
     const ref = doc(db, "groups", groupId);
     const snap = await getDoc(ref);
-    return snap.exists() ? snap.data() : null;
+    return snap.exists() ? (snap.data() as Group) : null;
   },
 
-  async getAllGroups() {
-    const snap = await getDocs(collection(db, "groups"));
-    return snap.docs.map((d) => d.data());
+  async getUserGroups(userId: string) {
+    const q = query(
+      collection(db, "groups"),
+      where("members", "array-contains", userId)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data() as Group);
+  },
+
+  async getLeaderGroups(leaderId: string) {
+    const q = query(
+      collection(db, "groups"),
+      where("leaderId", "==", leaderId)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data() as Group);
+  },
+
+  async updateGroup(groupId: string, data: Partial<Group>) {
+    const ref = doc(db, "groups", groupId);
+    await updateDoc(ref, data);
   },
 
   async addMember(groupId: string, userId: string) {
     const ref = doc(db, "groups", groupId);
-    const groupSnap = await getDoc(ref);
-    if (!groupSnap.exists()) return;
-
-    const current = groupSnap.data().members || [];
-
     await updateDoc(ref, {
-      members: [...new Set([...current, userId])],
+      members: arrayUnion(userId),
     });
   },
 
   async removeMember(groupId: string, userId: string) {
     const ref = doc(db, "groups", groupId);
-    const groupSnap = await getDoc(ref);
-    if (!groupSnap.exists()) return;
-
-    const filtered = groupSnap
-      .data()
-      .members.filter((m: string) => m !== userId);
-
     await updateDoc(ref, {
-      members: filtered,
+      members: arrayRemove(userId),
     });
+  },
+
+  async deleteGroup(groupId: string) {
+    const ref = doc(db, "groups", groupId);
+    await deleteDoc(ref);
   },
 };

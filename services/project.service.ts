@@ -11,19 +11,20 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 
-export interface Reward {
-  name: string;
+export interface ProjectReward {
   icon: string;
+  name: string;
 }
 
 export interface Project {
-  projectId: string;
-  name: string;
-  isPrivate: boolean;
-  groupId: string | null;
-  projectLeader: string;
-  reward: Reward;
   createdAt: number;
+  groupId: string;
+  bgColor: string;
+  isPrivate: boolean;
+  name: string;
+  projectId: string;
+  projectLeader: string;
+  reward: ProjectReward;
 }
 
 export const ProjectService = {
@@ -41,7 +42,7 @@ export const ProjectService = {
   async getProject(projectId: string) {
     const ref = doc(db, "projects", projectId);
     const snap = await getDoc(ref);
-    return snap.exists() ? snap.data() : null;
+    return snap.exists() ? (snap.data() as Project) : null;
   },
 
   async getGroupProjects(groupId: string) {
@@ -50,7 +51,7 @@ export const ProjectService = {
       where("groupId", "==", groupId)
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => d.data());
+    return snap.docs.map((d) => d.data() as Project);
   },
 
   async getUserPrivateProjects(userId: string) {
@@ -60,7 +61,7 @@ export const ProjectService = {
       where("isPrivate", "==", true)
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => d.data());
+    return snap.docs.map((d) => d.data() as Project);
   },
 
   async updateProject(projectId: string, data: Partial<Project>) {
