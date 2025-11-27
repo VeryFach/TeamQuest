@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "142027764531",
+    "project_id": "teamquest-acb3b",
+    "storage_bucket": "teamquest-acb3b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:142027764531:android:b99eb64aed65bc1b418446",
+        "android_client_info": {
+          "package_name": "com.anonymous.TeamQuest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "142027764531-chfkjikff1q2c8iak6nfkavo9inno7rm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1erSvnedFCnHNIGRH7WgfcUOFE1AY734"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "142027764531-chfkjikff1q2c8iak6nfkavo9inno7rm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Dimensions,
@@ -11,11 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-// GANTI KE LINE CHART
 import { LineChart, PieChart } from "react-native-chart-kit";
-
 const screenWidth = Dimensions.get("window").width;
 
+// --- 1. KONFIGURASI & KONSTANTA ---
 const COLORS = {
   background: "#FFFBF5",
   primary: "#FF8C66",
@@ -26,70 +26,272 @@ const COLORS = {
   white: "#FFFFFF",
   charts: ["#FF6B6B", "#4ECDC4", "#FFE66D"],
   gray: "#F0F0F0",
+  danger: "#FF4757", // Warna untuk tombol logout/auth
 };
 
 const FILTER_TYPES = ["Week", "Month", "Year"];
 
+const CHART_CONFIG = {
+  backgroundGradientFrom: "#FFFFFF",
+  backgroundGradientTo: "#FFFFFF",
+  color: (opacity = 1) => `rgba(255, 140, 102, ${opacity})`,
+  labelColor: (opacity = 1) => COLORS.textLight,
+  strokeWidth: 3,
+  decimalPlaces: 0,
+  propsForDots: {
+    r: "5",
+    strokeWidth: "2",
+    stroke: "#fff",
+  },
+  propsForBackgroundLines: {
+    strokeDasharray: "",
+    stroke: "#F3F3F3",
+  },
+};
+
+// --- 2. SUB-COMPONENTS (KOMPONEN TERPISAH) ---
+
+const Header = () => (
+  <View style={styles.header}>
+    <View style={styles.userInfo}>
+      <Image
+        source={{ uri: "https://i.pravatar.cc/150?img=12" }}
+        style={styles.avatar}
+      />
+      <View>
+        <Text style={styles.greetingText}>Welcome back,</Text>
+        <Text style={styles.userName}>Raka</Text>
+      </View>
+    </View>
+    <TouchableOpacity style={styles.iconContainer}>
+      <Ionicons
+        name="notifications-outline"
+        size={24}
+        color={COLORS.textDark}
+      />
+      <View style={styles.badge} />
+    </TouchableOpacity>
+  </View>
+);
+
+const FilterSection = ({ currentFilter, setFilter }) => (
+  <View style={styles.filterContainer}>
+    <View style={styles.segmentControl}>
+      {FILTER_TYPES.map((type) => (
+        <TouchableOpacity
+          key={type}
+          onPress={() => setFilter(type)}
+          style={[
+            styles.segmentButton,
+            currentFilter === type && styles.segmentButtonActive,
+          ]}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              currentFilter === type && styles.segmentTextActive,
+            ]}
+          >
+            {type}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
+
+const DateNavigator = ({ title, onPrev, onNext }) => (
+  <View style={styles.dateNavContainer}>
+    <TouchableOpacity onPress={onPrev} style={styles.navBtn}>
+      <Ionicons name="chevron-back" size={20} color={COLORS.textDark} />
+    </TouchableOpacity>
+    <Text style={styles.dateNavTitle}>{title}</Text>
+    <TouchableOpacity onPress={onNext} style={styles.navBtn}>
+      <Ionicons name="chevron-forward" size={20} color={COLORS.textDark} />
+    </TouchableOpacity>
+  </View>
+);
+
+const StatsOverview = ({ completed, pending }) => (
+  <View style={styles.statsContainer}>
+    {/* Card Completed */}
+    <LinearGradient
+      colors={[COLORS.primary, "#FF9F7C"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.statCard}
+    >
+      <View style={styles.statIconBg}>
+        <MaterialCommunityIcons
+          name="check-circle-outline"
+          size={24}
+          color={COLORS.primary}
+        />
+      </View>
+      <View>
+        <Text style={styles.statNumber}>{completed}</Text>
+        <Text style={styles.statLabel}>Completed</Text>
+      </View>
+    </LinearGradient>
+
+    {/* Card Pending */}
+    <View style={[styles.statCard, styles.statCardWhite]}>
+      <View
+        style={[styles.statIconBg, { backgroundColor: COLORS.primaryLight }]}
+      >
+        <MaterialCommunityIcons
+          name="timer-sand"
+          size={24}
+          color={COLORS.primary}
+        />
+      </View>
+      <View>
+        <Text style={[styles.statNumber, { color: COLORS.textDark }]}>
+          {pending}
+        </Text>
+        <Text style={[styles.statLabel, { color: COLORS.textLight }]}>
+          Pending
+        </Text>
+      </View>
+    </View>
+  </View>
+);
+
+const ProductivityChart = ({ data, labels }) => (
+  <View style={styles.chartCard}>
+    <View style={styles.cardHeaderRow}>
+      <Text style={styles.cardTitle}>Productivity Trend</Text>
+    </View>
+    <LineChart
+      data={{
+        labels: labels,
+        datasets: [{ data: data }],
+      }}
+      width={screenWidth}
+      height={220}
+      yAxisLabel=""
+      yAxisSuffix=""
+      chartConfig={CHART_CONFIG}
+      bezier
+      withDots={true}
+      withShadow={true}
+      withInnerLines={false}
+      withOuterLines={false}
+      style={styles.chart}
+    />
+  </View>
+);
+
+const GoalsChart = ({ pieData, total }) => (
+  <View style={styles.chartCard}>
+    <View style={styles.cardHeaderRow}>
+      <Text style={styles.cardTitle}>Goals Achieved</Text>
+      <MaterialCommunityIcons
+        name="dots-horizontal"
+        size={24}
+        color="#B0B0B0"
+      />
+    </View>
+
+    <View style={styles.donutContainer}>
+      <View style={styles.chartWrapper}>
+        <PieChart
+          data={pieData}
+          width={180}
+          height={180}
+          chartConfig={CHART_CONFIG}
+          accessor={"population"}
+          backgroundColor={"transparent"}
+          paddingLeft={"45"}
+          center={[0, 0]}
+          absolute={false}
+          hasLegend={false}
+        />
+        <View style={styles.donutCenterText}>
+          <Text style={styles.donutNumber}>{total}</Text>
+          <Text style={styles.donutLabel}>Total</Text>
+        </View>
+      </View>
+
+      {/* Manual Legend */}
+      <View style={styles.legendContainer}>
+        {pieData.map((item, index) => (
+          <View key={index} style={styles.legendRow}>
+            <View style={styles.legendLeft}>
+              <View
+                style={[styles.legendDot, { backgroundColor: item.color }]}
+              />
+              <Text style={styles.legendText}>{item.name}</Text>
+            </View>
+            <Text style={styles.legendValue}>{item.population}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  </View>
+);
+
+// --- KOMPONEN BARU: TOMBOL AUTH ---
+const AuthButton = ({ onPress }) => (
+  <TouchableOpacity style={styles.authButton} onPress={onPress}>
+    <MaterialCommunityIcons name="logout" size={20} color={COLORS.danger} />
+    <Text style={styles.authButtonText}>Log Out / Go to Login</Text>
+  </TouchableOpacity>
+);
+
+// --- 3. MAIN COMPONENT ---
 export default function App() {
+  const router = useRouter();
+
   const [filterType, setFilterType] = useState("Week");
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // --- LOGIKA DATA DINAMIS (CHART + OVERVIEW CARD) ---
+  // --- LOGIKA DATA DINAMIS ---
   const dashboardData = useMemo(() => {
-    // 1. DATA MINGGUAN
     if (filterType === "Week") {
-      // Mencari tanggal awal minggu (Senin) dan akhir minggu (Minggu) dari currentDate
       const startOfWeek = new Date(currentDate);
-      const day = startOfWeek.getDay() || 7; // Mengatur agar Minggu jadi hari ke-7
-      if (day !== 1) startOfWeek.setHours(-24 * (day - 1)); // Mundur ke hari Senin
+      const day = startOfWeek.getDay() || 7;
+      if (day !== 1) startOfWeek.setHours(-24 * (day - 1));
 
       const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6); // Maju ke hari Minggu
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-      // Format tanggal (misal: 25 Nov - 01 Dec)
-      const options: Intl.DateTimeFormatOptions = {
-        day: "numeric",
-        month: "short",
-      };
+      const options = { day: "numeric", month: "short" };
       const label = `${startOfWeek.toLocaleDateString(
         "en-US",
         options
       )} - ${endOfWeek.toLocaleDateString("en-US", options)}`;
 
       return {
-        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // Sumbu X jadi Nama Hari
+        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         data: [1, 3, 2, 6, 4, 8, 5],
         completed: 29,
         pending: 4,
-        labelTitle: label, // Judul jadi "25 Nov - 01 Dec" (LEBIH JELAS)
+        labelTitle: label,
       };
-    }
-    // 2. DATA BULANAN
-    else if (filterType === "Month") {
+    } else if (filterType === "Month") {
       return {
         labels: ["W1", "W2", "W3", "W4"],
         data: [15, 25, 20, 35],
-        completed: 95, // Angka lebih besar karena bulanan
+        completed: 95,
         pending: 12,
         labelTitle: currentDate.toLocaleString("default", {
           month: "long",
           year: "numeric",
         }),
       };
-    }
-    // 3. DATA TAHUNAN
-    else {
+    } else {
       return {
-        labels: ["Jan", "Mar", "May", "Jul", "Sep", "Nov"], // Label dipersingkat agar muat
+        labels: ["Jan", "Mar", "May", "Jul", "Sep", "Nov"],
         data: [40, 55, 60, 45, 80, 95],
-        completed: 375, // Angka akumulasi tahunan
+        completed: 375,
         pending: 24,
         labelTitle: currentDate.getFullYear().toString(),
       };
     }
   }, [filterType, currentDate]);
 
-  const handleNavigation = (direction: number) => {
+  const handleNavigation = (direction) => {
     const newDate = new Date(currentDate);
     if (filterType === "Week")
       newDate.setDate(newDate.getDate() + direction * 7);
@@ -100,46 +302,18 @@ export default function App() {
     setCurrentDate(newDate);
   };
 
-  // --- Chart Configuration untuk Line Chart ---
-  const chartConfig = {
-    backgroundGradientFrom: "#FFFFFF",
-    backgroundGradientTo: "#FFFFFF",
-    // Warna Garis & Dot
-    color: (opacity = 1) => `rgba(255, 140, 102, ${opacity})`,
-    labelColor: (opacity = 1) => COLORS.textLight,
-    strokeWidth: 3, // Garis lebih tebal
-    decimalPlaces: 0,
-    propsForDots: {
-      r: "5", // Ukuran titik
-      strokeWidth: "2",
-      stroke: "#fff", // Ring putih di pinggir titik
-    },
-    propsForBackgroundLines: {
-      strokeDasharray: "", // Hapus garis putus-putus background jadi solid halus
-      stroke: "#F3F3F3",
-    },
+  const handleAuthAction = () => {
+    // Navigasi ke halaman Login disini
+    console.log("Navigating to Login Screen...");
+    alert("Navigating to Auth/Login");
+    router.push("/auth/login");
   };
 
   // Donut Data
   const pieData = [
-    {
-      name: "Pizza Party",
-      population: 8,
-      color: "#FF6B6B",
-      legendFontColor: "#7F7F7F",
-    },
-    {
-      name: "Gaming Night",
-      population: 12,
-      color: "#4ECDC4",
-      legendFontColor: "#7F7F7F",
-    },
-    {
-      name: "Movie Night",
-      population: 5,
-      color: "#FFE66D",
-      legendFontColor: "#7F7F7F",
-    },
+    { name: "Pizza Party", population: 8, color: "#FF6B6B" },
+    { name: "Gaming Night", population: 12, color: "#4ECDC4" },
+    { name: "Movie Night", population: 5, color: "#FFE66D" },
   ];
   const totalGoals = pieData.reduce((acc, curr) => acc + curr.population, 0);
 
@@ -151,202 +325,32 @@ export default function App() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* --- Header --- */}
-        <View style={styles.header}>
-          <View style={styles.userInfo}>
-            <Image
-              source={{ uri: "https://i.pravatar.cc/150?img=12" }}
-              style={styles.avatar}
-            />
-            <View>
-              <Text style={styles.greetingText}>Welcome back,</Text>
-              <Text style={styles.userName}>Raka</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.iconContainer}>
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={COLORS.textDark}
-            />
-            <View style={styles.badge} />
-          </TouchableOpacity>
-        </View>
+        <Header />
 
-        {/* --- Filter Section (NEW DESIGN) --- */}
-        {/* Filter ditaruh di atas agar mengontrol semua data di bawahnya */}
-        <View style={styles.filterContainer}>
-          <View style={styles.segmentControl}>
-            {FILTER_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type}
-                onPress={() => setFilterType(type)}
-                style={[
-                  styles.segmentButton,
-                  filterType === type && styles.segmentButtonActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    filterType === type && styles.segmentTextActive,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        <FilterSection currentFilter={filterType} setFilter={setFilterType} />
 
-        {/* --- Date Navigator --- */}
-        <View style={styles.dateNavContainer}>
-          <TouchableOpacity
-            onPress={() => handleNavigation(-1)}
-            style={styles.navBtn}
-          >
-            <Ionicons name="chevron-back" size={20} color={COLORS.textDark} />
-          </TouchableOpacity>
-          <Text style={styles.dateNavTitle}>{dashboardData.labelTitle}</Text>
-          <TouchableOpacity
-            onPress={() => handleNavigation(1)}
-            style={styles.navBtn}
-          >
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.textDark}
-            />
-          </TouchableOpacity>
-        </View>
+        <DateNavigator
+          title={dashboardData.labelTitle}
+          onPrev={() => handleNavigation(-1)}
+          onNext={() => handleNavigation(1)}
+        />
 
-        {/* --- Stats Overview (Angkanya Berubah Sesuai Filter) --- */}
-        <View style={styles.statsContainer}>
-          <LinearGradient
-            colors={[COLORS.primary, "#FF9F7C"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.statCard}
-          >
-            <View style={styles.statIconBg}>
-              <MaterialCommunityIcons
-                name="check-circle-outline"
-                size={24}
-                color={COLORS.primary}
-              />
-            </View>
-            <View>
-              {/* Data Completed berubah dinamis */}
-              <Text style={styles.statNumber}>{dashboardData.completed}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
-          </LinearGradient>
+        <StatsOverview
+          completed={dashboardData.completed}
+          pending={dashboardData.pending}
+        />
 
-          <View style={[styles.statCard, styles.statCardWhite]}>
-            <View
-              style={[
-                styles.statIconBg,
-                { backgroundColor: COLORS.primaryLight },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="timer-sand"
-                size={24}
-                color={COLORS.primary}
-              />
-            </View>
-            <View>
-              {/* Data Pending berubah dinamis */}
-              <Text style={[styles.statNumber, { color: COLORS.textDark }]}>
-                {dashboardData.pending}
-              </Text>
-              <Text style={[styles.statLabel, { color: COLORS.textLight }]}>
-                Pending
-              </Text>
-            </View>
-          </View>
-        </View>
+        <ProductivityChart
+          data={dashboardData.data}
+          labels={dashboardData.labels}
+        />
 
-        {/* --- LINE CHART Section --- */}
-        <View style={styles.chartCard}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Productivity Trend</Text>
-          </View>
+        <GoalsChart pieData={pieData} total={totalGoals} />
 
-          <LineChart
-            data={{
-              labels: dashboardData.labels,
-              datasets: [
-                {
-                  data: dashboardData.data,
-                },
-              ],
-            }}
-            width={screenWidth} // Adjust width padding
-            height={220}
-            yAxisLabel=""
-            yAxisSuffix=""
-            chartConfig={chartConfig}
-            bezier // INI YANG MEMBUAT GARIS MELENGKUNG HALUS
-            withDots={true}
-            withShadow={true} // Gradient di bawah garis
-            withInnerLines={false} // Hilangkan garis grid dalam agar bersih
-            withOuterLines={false}
-            style={styles.chart}
-          />
-        </View>
+        {/* --- TOMBOL AUTH DI BAWAH --- */}
+        <AuthButton onPress={handleAuthAction} />
 
-        {/* --- Goals Achieved --- */}
-        <View style={styles.chartCard}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>Goals Achieved</Text>
-            <MaterialCommunityIcons
-              name="dots-horizontal"
-              size={24}
-              color="#B0B0B0"
-            />
-          </View>
-
-          <View style={styles.donutContainer}>
-            <View style={styles.chartWrapper}>
-              <PieChart
-                data={pieData}
-                width={180}
-                height={180}
-                chartConfig={chartConfig}
-                accessor={"population"}
-                backgroundColor={"transparent"}
-                paddingLeft={"45"}
-                center={[0, 0]}
-                absolute={false}
-                hasLegend={false}
-              />
-              <View style={styles.donutCenterText}>
-                <Text style={styles.donutNumber}>{totalGoals}</Text>
-                <Text style={styles.donutLabel}>Total</Text>
-              </View>
-            </View>
-
-            <View style={styles.legendContainer}>
-              {pieData.map((item, index) => (
-                <View key={index} style={styles.legendRow}>
-                  <View style={styles.legendLeft}>
-                    <View
-                      style={[
-                        styles.legendDot,
-                        { backgroundColor: item.color },
-                      ]}
-                    />
-                    <Text style={styles.legendText}>{item.name}</Text>
-                  </View>
-                  <Text style={styles.legendValue}>{item.population}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <View style={{ height: 100 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -359,6 +363,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
+    paddingBottom: 50,
   },
   // --- Header ---
   header: {
@@ -400,14 +405,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
 
-  // --- NEW FILTER STYLES (Segmented Control) ---
+  // --- Filter ---
   filterContainer: {
     alignItems: "center",
     marginBottom: 10,
   },
   segmentControl: {
     flexDirection: "row",
-    backgroundColor: "#EFEFEF", // Abu-abu background track
+    backgroundColor: "#EFEFEF",
     borderRadius: 12,
     padding: 4,
     width: "100%",
@@ -436,7 +441,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // --- Date Navigator Title ---
+  // --- Date Navigator ---
   dateNavContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -496,7 +501,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // --- Chart Cards ---
+  // --- Charts Common ---
   chartCard: {
     backgroundColor: COLORS.white,
     borderRadius: 24,
@@ -518,9 +523,10 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: "700", color: COLORS.textDark },
   chart: {
     borderRadius: 16,
-    alignSelf: "center", // Membuat chart berada di tengah horizontal
+    alignSelf: "center",
   },
-  // --- Goals (Donut) ---
+
+  // --- Donut Chart ---
   donutContainer: { alignItems: "center" },
   chartWrapper: {
     position: "relative",
@@ -551,4 +557,23 @@ const styles = StyleSheet.create({
   legendDot: { width: 12, height: 12, borderRadius: 6, marginRight: 10 },
   legendText: { fontSize: 14, color: COLORS.textDark, fontWeight: "500" },
   legendValue: { fontSize: 14, color: COLORS.textDark, fontWeight: "bold" },
+
+  // --- NEW AUTH BUTTON STYLES ---
+  authButton: {
+    flexDirection: "row",
+    backgroundColor: "#FFE5E7", // Light Red Background
+    paddingVertical: 16,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#FFD1D6",
+  },
+  authButtonText: {
+    color: COLORS.danger,
+    fontSize: 16,
+    fontWeight: "700",
+    marginLeft: 10,
+  },
 });
