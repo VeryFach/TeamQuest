@@ -35,10 +35,10 @@ export default function Header({ dateLabel, isCalendarOpen, onToggleCalendar, ch
         {!isCalendarOpen && (
           <View style={{ width: '100%' }}>
               <View style={{ alignItems: 'flex-end', marginBottom: 5 }}>
-                  <Text style={styles.percentageText}>68<Text style={styles.percentSymbol}>%</Text></Text>
+                  <Text style={styles.percentageText}>65<Text style={styles.percentSymbol}>%</Text></Text>
               </View>
               <View style={{ height: 8, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 4, width: '100%' }}>
-                  <View style={{ height: '100%', backgroundColor: 'white', borderRadius: 4, width: '68%' }} />
+                  <View style={{ height: '100%', backgroundColor: 'white', borderRadius: 4, width: '65%' }} />
               </View>
           </View>
         )}

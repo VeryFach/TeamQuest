@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Import Komponen yang sudah dipisah
+// Import Komponen
 import Header from '../../../components/todo/Header';
 import CustomCalendar from '../../../components/todo/CustomCalendar';
 import FloatingStatusBar from '../../../components/todo/FloatingStatusBar';
@@ -15,6 +15,9 @@ export default function TodoListScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date()); 
   const [viewDate, setViewDate] = useState(new Date()); 
   const [isGroupModalVisible, setGroupModalVisible] = useState(false);
+
+  // 1. STATE BARU: Untuk melacak tab mana yang aktif ('group' atau 'private')
+  const [activeTab, setActiveTab] = useState<'group' | 'private'>('group');
 
   const changeMonth = (increment: number) => {
     const newDate = new Date(viewDate);
@@ -36,7 +39,7 @@ export default function TodoListScreen() {
   return (
     <View style={styles.container}>
       
-      {/* 1. Header & Calendar */}
+      {/* Header & Calendar (Tetap Muncul di kedua tab) */}
       <Header 
         dateLabel={getHeaderDateLabel()} 
         isCalendarOpen={isCalendarVisible} 
@@ -57,8 +60,11 @@ export default function TodoListScreen() {
         />
       </Header>
 
-      {/* 2. Floating Bar */}
-      <FloatingStatusBar />
+      {/* 2. Floating Bar dengan Props activeTab */}
+      <FloatingStatusBar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+      />
 
       <ScrollView 
         style={styles.contentContainer} 
@@ -66,33 +72,57 @@ export default function TodoListScreen() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         
-        {/* 3. Horizontal Focus Cards (Bisa dipisah juga kalau mau, tapi ini contoh inline sedikit) */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-          <TouchableOpacity style={styles.addCard}
-            onPress={() => setGroupModalVisible(true)}>
-            <View style={styles.addIconCircle}>
-              <Ionicons name="add" size={30} color="#000000" />
-            </View>
-            <Text style={styles.addCardText}>Add Task</Text>
-          </TouchableOpacity>
+        {/* 3. LOGIKA KONTEN BERDASARKAN TAB */}
+        {activeTab === 'group' ? (
+          /* ================= KONTEN GROUP ================= */
+          <>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              <TouchableOpacity style={styles.addCard} onPress={() => setGroupModalVisible(true)}>
+                <View style={styles.addIconCircle}>
+                  <Ionicons name="add" size={30} color="#000000" />
+                </View>
+                <Text style={styles.addCardText}>Add Task</Text>
+              </TouchableOpacity>
 
-          <View style={styles.activeCard}>
-            <View>
-              <Text style={styles.activeCardTitle}>Daily design exercise</Text>
-              <Text style={styles.activeCardSubtitle}>Sprint 14 : Design Checkout</Text>
-              <Text style={styles.activeCardMeta}>Tim Produktif • Today</Text>
-            </View>
-            <Text style={styles.cardEmoji}>🍕</Text>
-          </View>
-        </ScrollView>
+              <View style={styles.activeCard}>
+                <View>
+                  <Text style={styles.activeCardTitle}>Daily design exercise</Text>
+                  <Text style={styles.activeCardSubtitle}>Sprint 14 : Design Checkout</Text>
+                  <Text style={styles.activeCardMeta}>Tim Produktif • Today</Text>
+                </View>
+                <Text style={styles.cardEmoji}>🍕</Text>
+              </View>
+            </ScrollView>
 
-        {/* 4. Completed Section */}
-        <CompletedList />
+            <CompletedList />
+            <ProjectList onAddPress={() => setGroupModalVisible(true)}/>
+          </>
+        ) : (
+          /* ================= KONTEN PRIVATE ================= */
+          /* Saat ini isinya sama, tapi nanti kamu bisa ubah bagian ini */
+          <>
+             <View style={{paddingHorizontal: 25, marginBottom: 10}}>
+                <Text style={{color: '#d97706', fontWeight: 'bold'}}>Private Workspace</Text>
+             </View>
 
-        {/* 5. Projects Section */}
-        <ProjectList onAddPress={() => setGroupModalVisible(true)}/>
+             {/* Contoh: Di Private mungkin card Add Task-nya beda fungsi */}
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+              <TouchableOpacity style={styles.addCard}>
+                <View style={styles.addIconCircle}>
+                  <Ionicons name="lock-closed" size={30} color="#000000" />
+                </View>
+                <Text style={styles.addCardText}>Private Task</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            {/* Reuse komponen list tapi mungkin datanya beda nanti */}
+            <CompletedList />
+            {/* Private mungkin tidak punya ProjectList tim, jadi saya hide atau ganti */}
+          </>
+        )}
 
       </ScrollView>
+      
       <GroupSelectorModal 
         visible={isGroupModalVisible}
         onClose={() => setGroupModalVisible(false)}
@@ -102,7 +132,6 @@ export default function TodoListScreen() {
   );
 }
 
-// Style global yang tersisa hanya container & card kecil di ScrollView
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFBEB' },
   contentContainer: { flex: 1, paddingTop: 10, zIndex: 0 },

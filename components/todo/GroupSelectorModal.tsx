@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, Modal, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 
@@ -15,12 +15,16 @@ interface GroupSelectorModalProps {
   onSelectGroup: (group: GroupData) => void;
 }
 
-// Data Dummy
+// Data Dummy (Banyak data untuk tes scroll)
 const DUMMY_GROUPS: GroupData[] = [
   { id: '1', name: 'Tim Produktif' },
   { id: '2', name: 'Team Produk UI/UX' },
   { id: '3', name: 'ABC' },
   { id: '4', name: 'CDE' },
+  { id: '5', name: 'Tim Produktif 2' },
+  { id: '6', name: 'Team Produk UI/UX 2' },
+  { id: '7', name: 'ABC 2' },
+  { id: '8', name: 'CDE 2' },
 ];
 
 export default function GroupSelectorModal({ visible, onClose, onSelectGroup }: GroupSelectorModalProps) {
@@ -31,7 +35,6 @@ export default function GroupSelectorModal({ visible, onClose, onSelectGroup }: 
       visible={visible}
       onRequestClose={onClose}
     >
-      {/* 2. GANTI View BIASA MENJADI BlurView */}
       <BlurView intensity={50} tint="light" style={styles.overlay}>
         
         <View style={styles.modalContainer}>
@@ -42,8 +45,14 @@ export default function GroupSelectorModal({ visible, onClose, onSelectGroup }: 
             </TouchableOpacity>
           </View>
 
-          {/* List Group */}
-          <View style={styles.listContainer}>
+          {/* PERUBAHAN DI SINI: */}
+          {/* 1. Ganti View jadi ScrollView */}
+          {/* 2. Pindahkan gap ke contentContainerStyle */}
+          <ScrollView 
+            style={styles.listContainer} 
+            contentContainerStyle={{ gap: 10, paddingBottom: 10 }}
+            showsVerticalScrollIndicator={true} // Menampilkan scrollbar
+          >
             {DUMMY_GROUPS.map((item) => (
               <TouchableOpacity 
                 key={item.id} 
@@ -51,11 +60,10 @@ export default function GroupSelectorModal({ visible, onClose, onSelectGroup }: 
                 onPress={() => onSelectGroup(item)}
               >
                 <Text style={styles.groupButtonText}>{item.name}</Text>
-                {/* Dekorasi titik putih kecil di kanan */}
                 <View style={styles.dotDecoration} />
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
 
         </View>
       </BlurView>
@@ -66,7 +74,6 @@ export default function GroupSelectorModal({ visible, onClose, onSelectGroup }: 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    // backgroundColor: 'rgba(0, 0, 0, 0.5)', <--- HAPUS INI (Warna gelap sudah dari tint="dark")
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -75,7 +82,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 20,
-    // Tambahkan shadow agar modal terlihat melayang di atas blur
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -98,7 +104,8 @@ const styles = StyleSheet.create({
     marginLeft: 24, 
   },
   listContainer: {
-    gap: 10, 
+    maxHeight: 200, 
+    width: '100%',
   },
   groupButton: {
     backgroundColor: '#cc7038', 
@@ -117,13 +124,13 @@ const styles = StyleSheet.create({
   },
   dotDecoration: {
     position: 'absolute',
-    right: 15, // Saya atur posisinya biar terlihat
+    right: 15,
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: 'white',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.5)',
-    display: 'none' // Ubah jadi 'flex' jika ingin titik putihnya muncul
+    display: 'none' 
   }
 });
