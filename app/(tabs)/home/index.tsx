@@ -1,14 +1,18 @@
-import FAB from "@/components/common/FAB";
+import HomeActionMenu from "@/components/home/HomeActionMenu"; // Import komponen baru
 import ProjectCard from "@/components/home/ProjectCard";
 import TaskItem from "@/components/home/TaskItem";
-// Import data dummy yang baru
-import { PROJECTS_DATA } from "@/constants/projectsData";
 import { auth } from "@/firebaseConfig";
+import { GroupService } from "@/services/group.service";
+import { ProjectService } from "@/services/project.service";
+import { Task, TaskService } from "@/services/task.service"; // Pastikan ProjectService diimport
+import { Group } from "@/types/group";
+import { onAuthStateChanged } from "@firebase/auth";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,77 +22,137 @@ import {
 
 export default function Home() {
   const router = useRouter();
-  const [authChecked, setAuthChecked] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Data State
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [myGroups, setMyGroups] = useState<Group[]>([]);
+  const [myProjects, setMyProjects] = useState<any[]>([]); // Sesuaikan tipe Project
+  const [projectCards, setProjectCards] = useState<any[]>([]);
+
+  const [taskGroupNames, setTaskGroupNames] = useState<{
+    [taskId: string]: string | null;
+  }>({});
+
+  // 1. Cek Login & Ambil User ID
   useEffect(() => {
-    // Parameter 'user' di sini adalah object User dari Firebase
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthChecked(true);
-
       if (user) {
-        // --- DI SINI CARA DAPAT ID-NYA ---
-        const userId = user.uid;
-        console.log("User ID yang login:", userId);
-
-        // Redirect ke home
-        router.replace("/(tabs)/home");
+        setUserId(user.uid);
+        fetchData(user.uid);
       } else {
         router.replace("/auth/login");
       }
     });
-
     return unsubscribe;
-  }, [router]);
-  // 1. Mengambil semua task dari PROJECTS_DATA dan meratakannya (flatten)
-  // serta mapping agar sesuai dengan props yang diharapkan TaskItem (misal: title -> name)
-  const initialTasks = useMemo(() => {
-    const allTasks: any[] = [];
-    PROJECTS_DATA.forEach((project) => {
-      project.tasks.forEach((task) => {
-        allTasks.push({
-          id: task.id, // Menggunakan string ID dari data baru
-          name: task.title, // Map 'title' dari data baru ke 'name' (props lama)
-          group: project.group || "Private",
-          completed: task.completed,
-          projectId: project.id,
-        });
-      });
-    });
-    return allTasks;
   }, []);
 
-  const [tasks, setTasks] = useState(initialTasks);
+  // 2. Fungsi Fetch Data dari Firebase
 
-  // 2. Mapping PROJECTS_DATA agar sesuai dengan props ProjectCard
-  const initialProjects = useMemo(() => {
-    return PROJECTS_DATA.map((project) => ({
-      id: project.id,
-      group_name: project.group || "Private",
-      // Menggunakan subtitle sebagai 'reward' (keterangan singkat di kartu)
-      reward: project.subtitle,
-      reward_emot: project.emoji,
-      tasks_total: project.tasks.length,
-      tasks_completed: project.tasks.filter((t) => t.completed).length,
-    }));
-  }, []);
+  const fetchData = async (uid: string) => {
+    try {
+      setLoading(true);
+      const userTasks = await TaskService.getUserTasks(uid);
+      const userGroups = await GroupService.getUserGroups(uid);
+      const userProjects = await ProjectService.getUserPrivateProjects(uid);
 
-  const [projects, setProjects] = useState(initialProjects);
+      setTasks(userTasks);
+      setMyGroups(userGroups);
+      setMyProjects(userProjects);
 
-  // Toggle task completion (ID sekarang string)
-  const toggleTaskCompletion = (taskId: string) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((t) =>
-        t.id === taskId ? { ...t, completed: !t.completed } : t
-      )
-    );
+      // Ambil data group name dan stats untuk setiap project
+      const cards = await Promise.all(
+        userProjects.map(async (project) => {
+          const group = await GroupService.getGroup(project.groupId);
+          const projectTasks = userTasks.filter(
+            (t) => t.projectId === project.projectId
+          );
+          const tasks_total = projectTasks.length;
+          const tasks_completed = projectTasks.filter((t) => t.isDone).length;
+
+          return {
+            id: project.projectId,
+            group_name: group ? group.name : "-",
+            reward: project.reward.name,
+            reward_emot: project.reward.icon,
+            tasks_total,
+            tasks_completed,
+          };
+        })
+      );
+      setProjectCards(cards);
+
+      // Ambil group name untuk setiap task (hanya untuk task yang akan ditampilkan)
+      const shownTasks = userTasks.slice(0, 5);
+      const groupNameMap: { [taskId: string]: string | null } = {};
+      await Promise.all(
+        shownTasks.map(async (task) => {
+          const groupName = await TaskService.getGroupNameByTaskId(task.id);
+          groupNameMap[task.id] = groupName;
+        })
+      );
+      setTaskGroupNames(groupNameMap);
+    } catch (error) {
+      console.error("Error fetching home data:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  // Sort tasks: incomplete first, then completed
+  // Helper: Hitung jumlah task selesai dan total task per project
+  const getProjectTaskStats = (projectId: string) => {
+    const projectTasks = tasks.filter((t) => t.projectId === projectId);
+    const tasks_total = projectTasks.length;
+    const tasks_completed = projectTasks.filter((t) => t.isDone).length;
+    return { tasks_total, tasks_completed };
+  };
+
+  const onRefresh = () => {
+    if (userId) {
+      setRefreshing(true);
+      fetchData(userId);
+    }
+  };
+
+  // 3. Logic Toggle Task
+  const toggleTaskCompletion = async (
+    taskId: string,
+    currentStatus: boolean
+  ) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, isDone: !currentStatus } : t))
+    );
+
+    try {
+      await TaskService.updateTask(taskId, { isDone: !currentStatus });
+    } catch (error) {
+      console.error("Failed to update task", error);
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, isDone: currentStatus } : t))
+      );
+    }
+  };
+
+  // Sorting Task
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
-      if (a.completed === b.completed) return 0;
-      return a.completed ? 1 : -1; // completed tasks go to bottom
+      if (a.isDone === b.isDone) return 0;
+      return a.isDone ? 1 : -1;
     });
   }, [tasks]);
+
+  // --- RENDER ---
+
+  if (loading && !refreshing) {
+    return (
+      <View style={[styles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#C8733B" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -100,16 +164,18 @@ export default function Home() {
       <View style={styles.card}>
         <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
 
-        {/* SCROLLVIEW DI SINI - bungkus semua konten */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 20, gap: 24, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
           {/* Section My Tasks Today */}
           <View>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>My Tasks Today</Text>
+              <Text style={styles.cardTitle}>My Tasks</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/todo")}>
                 <Text style={styles.viewMore}>view more</Text>
               </TouchableOpacity>
@@ -117,28 +183,31 @@ export default function Home() {
 
             <View style={{ marginTop: 8 }}>
               {sortedTasks.length > 0 ? (
-                sortedTasks.slice(0, 5).map(
-                  (
-                    task // Menampilkan max 5 task agar tidak terlalu panjang
-                  ) => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      onToggleComplete={() => toggleTaskCompletion(task.id)}
-                    />
-                  )
-                )
+                sortedTasks.slice(0, 5).map((task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={{
+                      id: Number(task.id),
+                      name: task.taskName,
+                      group: taskGroupNames[task.id] || "-", // Tampilkan nama group
+                      completed: task.isDone,
+                      projectId: task.projectId,
+                    }}
+                    onToggleComplete={() =>
+                      toggleTaskCompletion(task.id, task.isDone)
+                    }
+                  />
+                ))
               ) : (
-                <Text
-                  style={{ color: "#666", fontStyle: "italic", marginTop: 10 }}
-                >
-                  No tasks for today.
-                </Text>
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No tasks yet.</Text>
+                  {/* Note: Karena logika FAB sudah dipindah, CTA ini bisa diarahkan ke route lain atau dihapus */}
+                </View>
               )}
             </View>
           </View>
 
-          {/* Section My Projects */}
+          {/* Section My Teams/Groups */}
           <View style={{ marginBottom: 20 }}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>My Projects</Text>
@@ -147,16 +216,22 @@ export default function Home() {
               </TouchableOpacity>
             </View>
             <View style={{ marginTop: 8, gap: 10 }}>
-              {projects.map((project) => (
-                <ProjectCard key={project.id} data={project} />
-              ))}
+              {projectCards.length > 0 ? (
+                projectCards.map((card) => (
+                  <ProjectCard key={card.id} data={card} />
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No projects found.</Text>
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
       </View>
 
-      {/* Tombol Plus - Floating Action Button */}
-      <FAB />
+      {/* --- REPLACED FAB & MODALS --- */}
+      <HomeActionMenu myGroups={myGroups} />
     </View>
   );
 }
@@ -165,14 +240,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "transparent",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 48,
+    paddingTop: 32, // Lebih kecil agar tidak terlalu jauh di desktop
     gap: 16,
+    paddingHorizontal: 0, // default, akan diatur di card
   },
   header: {
     flexDirection: "row",
     gap: 8,
+    justifyContent: "center",
   },
   teamText: {
     color: "#A2B06E",
@@ -185,27 +260,24 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   card: {
+    flex: 1,
     width: "100%",
-    height: "100%",
-    borderRadius: 20,
+    maxWidth: 600, // Batas lebar card di desktop/laptop
+    alignSelf: "center", // Tengah di layar lebar
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-  },
-  cardInner: {
-    flex: 1,
-    padding: 20,
+    paddingBottom: 100,
+    minHeight: 500, // Opsional: agar card tidak terlalu pendek di desktop
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 12,
-    justifyContent: "space-between", // Memastikan 'view more' di kanan
+    justifyContent: "space-between",
   },
   cardTitle: {
     fontWeight: "bold",
@@ -216,5 +288,21 @@ const styles = StyleSheet.create({
     color: "#C8733B",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 12,
+    marginTop: 10,
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+  emptyText: {
+    color: "#666",
+    fontSize: 14,
+    fontStyle: "italic",
   },
 });

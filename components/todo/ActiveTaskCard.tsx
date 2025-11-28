@@ -8,22 +8,24 @@ import {
   View,
 } from "react-native";
 
-import { PROJECTS_DATA } from "@/constants/projectsData";
 import TaskActionModal from "./TaskActionModal";
 
 interface ActiveTask {
-  taskId: string;
-  taskTitle: string;
+  id: string;
+  taskName: string;
   projectId: string;
-  projectTitle: string;
+  projectName: string;
   groupName: string;
   emoji: string;
-  createdAt: Date;
+  assignedTo: string;
+  isDone: boolean;
+  createdAt: any;
 }
 
 interface ActiveTaskCardProps {
   userId?: string;
   type?: "group" | "private";
+  tasks?: ActiveTask[];
   onAddPress?: () => void;
   onTaskPress?: (task: ActiveTask) => void;
   onEditTask?: (task: ActiveTask) => void;
@@ -32,9 +34,20 @@ interface ActiveTaskCardProps {
 }
 
 // Helper untuk format tanggal relatif
-const getRelativeDate = (date: Date): string => {
+const getRelativeDate = (date: any): string => {
+  if (!date) return "";
+
   const today = new Date();
-  const taskDate = new Date(date);
+  let taskDate: Date;
+
+  // Handle Firestore Timestamp
+  if (date?.toDate) {
+    taskDate = date.toDate();
+  } else if (date?.seconds) {
+    taskDate = new Date(date.seconds * 1000);
+  } else {
+    taskDate = new Date(date);
+  }
 
   today.setHours(0, 0, 0, 0);
   taskDate.setHours(0, 0, 0, 0);
@@ -51,49 +64,16 @@ const getRelativeDate = (date: Date): string => {
   });
 };
 
-const getActiveTasks = (
-  type: "group" | "private",
-  userId?: string
-): ActiveTask[] => {
-  const activeTasks: ActiveTask[] = [];
-
-  const filteredProjects =
-    type === "group"
-      ? PROJECTS_DATA.filter((p) => !!p.group)
-      : PROJECTS_DATA.filter((p) => !p.group);
-
-  filteredProjects.forEach((project) => {
-    const incompleteTasks = project.tasks.filter((task) => !task.completed);
-    incompleteTasks.forEach((task) => {
-      activeTasks.push({
-        taskId: task.id,
-        taskTitle: task.title,
-        projectId: project.id,
-        projectTitle: project.title,
-        groupName: project.group || "Private",
-        emoji: project.emoji,
-        createdAt: task.createdAt,
-      });
-    });
-  });
-
-  activeTasks.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-
-  return activeTasks;
-};
-
 const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
   userId,
   type = "group",
+  tasks = [],
   onAddPress,
   onTaskPress,
   onEditTask,
   onDeleteTask,
   onCompleteTask,
 }) => {
-  const activeTasks = getActiveTasks(type, userId);
   const scrollRef = useRef<ScrollView>(null);
 
   // State untuk modal
@@ -116,18 +96,21 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
     if (selectedTask && onEditTask) {
       onEditTask(selectedTask);
     }
+    setModalVisible(false);
   };
 
   const handleDelete = () => {
     if (selectedTask && onDeleteTask) {
       onDeleteTask(selectedTask);
     }
+    setModalVisible(false);
   };
 
   const handleComplete = () => {
     if (selectedTask && onCompleteTask) {
       onCompleteTask(selectedTask);
     }
+    setModalVisible(false);
   };
 
   return (
@@ -147,9 +130,9 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
         </TouchableOpacity>
 
         {/* Render Active Tasks */}
-        {activeTasks.map((task, idx) => (
+        {tasks.map((task) => (
           <TouchableOpacity
-            key={task.taskId}
+            key={task.id}
             style={styles.activeCard}
             onPress={() => handleTaskPress(task)}
             activeOpacity={0.9}
@@ -158,10 +141,10 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
             <View style={styles.cardContent}>
               <View>
                 <Text style={styles.activeCardTitle} numberOfLines={3}>
-                  {task.taskTitle}
+                  {task.taskName}
                 </Text>
                 <Text style={styles.activeCardSubtitle} numberOfLines={1}>
-                  {task.projectTitle}
+                  {task.projectName}
                 </Text>
               </View>
 
@@ -178,7 +161,7 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
         ))}
 
         {/* Empty State */}
-        {activeTasks.length === 0 && (
+        {tasks.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No active tasks 🎉</Text>
             <Text style={styles.emptySubtext}>You are all caught up!</Text>
@@ -190,7 +173,7 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
       <TaskActionModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        taskTitle={selectedTask?.taskTitle}
+        taskTitle={selectedTask?.taskName}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onComplete={handleComplete}

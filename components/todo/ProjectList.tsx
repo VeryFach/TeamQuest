@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
   ScrollView,
@@ -9,28 +8,45 @@ import {
   View,
 } from "react-native";
 
-// Import Komponen dan Hook baru
+// Import Komponen
 import ProjectCard from "@/components/home/ProjectCard";
-import { useProjectFilter } from "@/hooks/useProjectFilter"; // Sesuaikan path
+
+interface ProjectData {
+  id: string;
+  group_name: string;
+  title: string;
+  reward: string;
+  reward_emot: string;
+  tasks_total: number;
+  tasks_completed: number;
+  bgColor?: string;
+}
 
 interface ProjectListProps {
   onAddPress: () => void;
+  onProjectPress?: (project: ProjectData) => void;
   type?: string;
+  projects?: ProjectData[];
 }
 
 export default function ProjectList({
   onAddPress,
+  onProjectPress,
   type = "group",
+  projects = [],
 }: ProjectListProps) {
-  const router = useRouter();
-
-  // 🔥 Panggil Hook di sini (Clean banget!)
-  const { projects, uncompletedProjectsCount } = useProjectFilter(type);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Filter uncompleted projects
+  const uncompletedProjects = projects.filter(
+    (p) => p.tasks_completed < p.tasks_total || p.tasks_total === 0
+  );
+  const uncompletedProjectsCount = uncompletedProjects.length;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ x: 0, animated: true });
   }, [type]);
+
   return (
     <View>
       <View style={styles.sectionHeader}>
@@ -55,23 +71,38 @@ export default function ProjectList({
         </TouchableOpacity>
 
         {/* Rendering ProjectCard */}
-        {projects.map((project: any, idx) => (
+        {uncompletedProjects.map((project, idx) => (
           <View
             key={project.id}
             style={{
-              marginRight: idx === projects.length - 1 ? 40 : 15,
+              marginRight: idx === uncompletedProjects.length - 1 ? 40 : 15,
               height: 140,
               justifyContent: "center",
             }}
           >
             <ProjectCard
-              data={project} // Data sudah diformat di dalam hook
-              customBgColor={project.bgColor} // Pastikan hook mengembalikan ini atau ambil dari raw
+              data={{
+                id: project.id,
+                group_name: project.group_name,
+                reward: project.reward,
+                reward_emot: project.reward_emot,
+                tasks_total: project.tasks_total,
+                tasks_completed: project.tasks_completed,
+              }}
+              customBgColor={project.bgColor}
               scale={80}
-              onPress={() => router.push("/todo/detail")}
+              onPress={() => onProjectPress?.(project)}
             />
           </View>
         ))}
+
+        {/* Empty State */}
+        {uncompletedProjects.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No projects yet</Text>
+            <Text style={styles.emptySubtext}>Create your first project!</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -112,4 +143,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   addCardText: { fontWeight: "bold", color: "#000000", fontSize: 12 },
+  emptyCard: {
+    width: 200,
+    height: 140,
+    backgroundColor: "white",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  emptyText: {
+    fontWeight: "bold",
+    color: "#1f2937",
+    fontSize: 14,
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: "#9ca3af",
+    marginTop: 4,
+  },
 });

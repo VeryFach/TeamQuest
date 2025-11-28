@@ -10,6 +10,8 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { Group, GroupService } from "./group.service"; // pastikan path sesuai
+import { Task, TaskService } from "./task.service"; // pastikan path sesuai
 
 export interface ProjectReward {
   icon: string;
@@ -45,6 +47,12 @@ export const ProjectService = {
     return snap.exists() ? (snap.data() as Project) : null;
   },
 
+  async getGroupByProject(projectId: string): Promise<Group | null> {
+    const project = await ProjectService.getProject(projectId);
+    if (!project) return null;
+    return await GroupService.getGroup(project.groupId);
+  },
+
   async getGroupProjects(groupId: string) {
     const q = query(
       collection(db, "projects"),
@@ -72,5 +80,14 @@ export const ProjectService = {
   async deleteProject(projectId: string) {
     const ref = doc(db, "projects", projectId);
     await deleteDoc(ref);
+  },
+
+  async getProjectTaskStats(
+    projectId: string
+  ): Promise<{ tasks_total: number; tasks_completed: number }> {
+    const tasks: Task[] = await TaskService.getTasks(projectId);
+    const tasks_total = tasks.length;
+    const tasks_completed = tasks.filter((t) => t.isDone).length;
+    return { tasks_total, tasks_completed };
   },
 };
