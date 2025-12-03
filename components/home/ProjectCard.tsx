@@ -73,6 +73,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     if (onPress) {
       onPress(id);
     } else {
+      console.log(id);
       router.push({
         pathname: "/group/[id]",
         params: { id },

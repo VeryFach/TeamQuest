@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
-  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
-// Import Komponen
+// Import Komponen UI
 import ActiveTaskCard from "@/components/todo/ActiveTaskCard";
 import CompletedList from "@/components/todo/CompletedList";
 import CustomCalendar from "@/components/todo/CustomCalendar";
@@ -20,34 +17,19 @@ import FloatingStatusBar from "@/components/todo/FloatingStatusBar";
 import Header from "@/components/todo/Header";
 import ProjectList from "@/components/todo/ProjectList";
 
-// Import Services
+// Import Modals Baru
+import MonthPickerModal from "@/components/todo/MonthPickerModal";
+import YearPickerModal from "@/components/todo/YearPickerModal";
+
+// Import Services & Config
 import { auth } from "@/firebaseConfig";
 import { Group, GroupService } from "@/services/group.service";
 import { ProjectService } from "@/services/project.service";
 import { TaskService } from "@/services/task.service";
-import { onAuthStateChanged } from "@firebase/auth";
 import { useRouter } from "expo-router";
+import { onAuthStateChanged } from "firebase/auth";
 
-// Data Bulan
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-// Generate Tahun (misal: dari 2020 sampai 2030)
-const years = Array.from({ length: 11 }, (_, i) => 2020 + i);
-
-// Interface untuk data yang sudah diproses
+// Interfaces
 interface ProcessedProject {
   id: string;
   name: string;
@@ -94,12 +76,12 @@ export default function TodoListScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewDate, setViewDate] = useState(new Date());
 
-  // State untuk Modal/Dropdown
+  // Modal Visibility State
   const [isMonthPickerVisible, setMonthPickerVisible] = useState(false);
   const [isYearPickerVisible, setYearPickerVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"group" | "private">("group");
-  const [modalVisible, setModalVisible] = useState(false);
 
   // Computed values
   const currentTasks = activeTab === "group" ? groupTasks : privateTasks;
@@ -109,7 +91,8 @@ export default function TodoListScreen() {
   const incompleteTasks = currentTasks.filter((t) => !t.isDone);
   const totalUncompletedTasks = incompleteTasks.length;
   const totalAllTasks = currentTasks.length;
-  // 1. Cek Login
+
+  // --- 1. Effects & Fetching Logic (Tetap sama, hanya diringkas untuk brevity) ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -122,19 +105,12 @@ export default function TodoListScreen() {
     return unsubscribe;
   }, []);
 
-  // 2. Fetch All Data
   const fetchAllData = async (uid: string) => {
     try {
       setLoading(true);
-
-      // Fetch groups user
       const userGroups = await GroupService.getUserGroups(uid);
       setGroups(userGroups);
-
-      // Fetch group projects & tasks
       await fetchGroupData(uid, userGroups);
-
-      // Fetch private projects & tasks
       await fetchPrivateData(uid);
     } catch (error) {
       console.error("Error fetching todo data:", error);
@@ -144,21 +120,16 @@ export default function TodoListScreen() {
     }
   };
 
-  // 3. Fetch Group Projects & Tasks
   const fetchGroupData = async (uid: string, userGroups: Group[]) => {
     const allGroupProjects: ProcessedProject[] = [];
     const allGroupTasks: ProcessedTask[] = [];
 
     for (const group of userGroups) {
-      // Fetch projects per group
       const projects = await ProjectService.getGroupProjects(group.id);
-
       for (const project of projects) {
-        // Get task stats
         const stats = await ProjectService.getProjectTaskStats(
           project.projectId
         );
-
         allGroupProjects.push({
           id: project.projectId,
           name: project.name,
@@ -171,11 +142,9 @@ export default function TodoListScreen() {
           isPrivate: false,
         });
 
-        // Fetch tasks per project (yang di-assign ke user)
         const tasks = await TaskService.getTasks(project.projectId);
         const userTasks = tasks.filter((t) => t.assignedTo === uid);
-
-        for (const task of userTasks) {
+        userTasks.forEach((task) => {
           allGroupTasks.push({
             id: task.id,
             taskName: task.taskName,
@@ -187,26 +156,20 @@ export default function TodoListScreen() {
             isDone: task.isDone,
             createdAt: task.createdAt,
           });
-        }
+        });
       }
     }
-
     setGroupProjects(allGroupProjects);
     setGroupTasks(allGroupTasks);
   };
 
-  // 4. Fetch Private Projects & Tasks
   const fetchPrivateData = async (uid: string) => {
     const allPrivateProjects: ProcessedProject[] = [];
     const allPrivateTasks: ProcessedTask[] = [];
 
-    // Fetch private projects
     const projects = await ProjectService.getUserPrivateProjects(uid);
-
     for (const project of projects) {
-      // Get task stats
       const stats = await ProjectService.getProjectTaskStats(project.projectId);
-
       allPrivateProjects.push({
         id: project.projectId,
         name: project.name,
@@ -219,10 +182,8 @@ export default function TodoListScreen() {
         isPrivate: true,
       });
 
-      // Fetch tasks per project
       const tasks = await TaskService.getTasks(project.projectId);
-
-      for (const task of tasks) {
+      tasks.forEach((task) => {
         allPrivateTasks.push({
           id: task.id,
           taskName: task.taskName,
@@ -234,14 +195,12 @@ export default function TodoListScreen() {
           isDone: task.isDone,
           createdAt: task.createdAt,
         });
-      }
+      });
     }
-
     setPrivateProjects(allPrivateProjects);
     setPrivateTasks(allPrivateTasks);
   };
 
-  // 5. Toggle Task Completion
   const toggleTaskCompletion = async (
     taskId: string,
     currentStatus: boolean
@@ -249,35 +208,24 @@ export default function TodoListScreen() {
     try {
       await TaskService.updateTask(taskId, { isDone: !currentStatus });
 
-      // Update local state
-      if (activeTab === "group") {
-        setGroupTasks((prev) =>
-          prev.map((t) =>
-            t.id === taskId ? { ...t, isDone: !currentStatus } : t
-          )
+      // Update local state optimistically or re-fetch
+      const updateList = (list: ProcessedTask[]) =>
+        list.map((t) =>
+          t.id === taskId ? { ...t, isDone: !currentStatus } : t
         );
-      } else {
-        setPrivateTasks((prev) =>
-          prev.map((t) =>
-            t.id === taskId ? { ...t, isDone: !currentStatus } : t
-          )
-        );
-      }
 
-      // Refresh project stats
+      if (activeTab === "group") setGroupTasks((prev) => updateList(prev));
+      else setPrivateTasks((prev) => updateList(prev));
+
       if (userId) {
-        if (activeTab === "group") {
-          await fetchGroupData(userId, groups);
-        } else {
-          await fetchPrivateData(userId);
-        }
+        if (activeTab === "group") await fetchGroupData(userId, groups);
+        else await fetchPrivateData(userId);
       }
     } catch (error) {
       console.error("Error toggling task:", error);
     }
   };
 
-  // Refresh handler
   const onRefresh = () => {
     if (userId) {
       setRefreshing(true);
@@ -285,7 +233,7 @@ export default function TodoListScreen() {
     }
   };
 
-  // --- Logic Ganti Bulan/Tahun ---
+  // --- Handlers ---
   const changeMonth = (increment: number) => {
     const newDate = new Date(viewDate);
     newDate.setMonth(newDate.getMonth() + increment);
@@ -306,6 +254,11 @@ export default function TodoListScreen() {
     setYearPickerVisible(false);
   };
 
+  const handleSelectGroup = (group: Group) => {
+    setModalVisible(false);
+    router.push(`/(tabs)/group/${group.id}`);
+  };
+
   const getHeaderDateLabel = () => {
     const today = new Date();
     if (selectedDate.toDateString() === today.toDateString()) return "Today";
@@ -316,12 +269,6 @@ export default function TodoListScreen() {
     });
   };
 
-  const handleSelectGroup = (group: Group) => {
-    setModalVisible(false);
-    router.push(`/(tabs)/group/${group.id}`);
-  };
-
-  // Loading State
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -377,18 +324,18 @@ export default function TodoListScreen() {
           tasks={incompleteTasks}
           onAddPress={() => setModalVisible(true)}
           onTaskPress={(task) => {
+            // Logic navigasi tetap sama
             if (activeTab === "group") {
               const project = groupProjects.find(
                 (p) => p.id === task.projectId
               );
               if (project) {
                 const group = groups.find((g) => g.name === project.groupName);
-                if (group) {
+                if (group)
                   router.push({
                     pathname: "/(tabs)/group/[id]/projects/[projectId]",
                     params: { id: group.id, projectId: task.projectId },
                   });
-                }
               }
             } else {
               router.push({
@@ -411,43 +358,19 @@ export default function TodoListScreen() {
         {/* Projects */}
         <ProjectList
           type={activeTab}
-          projects={currentProjects.map((p) => {
-            // Debug: log setiap project
-            console.log("Project data:", p);
-            console.log("Mapped project:", {
-              id: p.id,
-              group_name: p.groupName,
-              title: p.name,
-              reward: p.reward,
-              reward_emot: p.rewardIcon,
-              tasks_total: p.tasks_total,
-              tasks_completed: p.tasks_completed,
-              bgColor: p.bgColor,
-            });
-
-            return {
-              id: p.id,
-              group_name: p.groupName,
-              title: p.name,
-              reward: p.reward,
-              reward_emot: p.rewardIcon,
-              tasks_total: p.tasks_total,
-              tasks_completed: p.tasks_completed,
-              bgColor: p.bgColor,
-            };
-          })}
+          projects={currentProjects}
           onAddPress={() => setModalVisible(true)}
           onProjectPress={(project) => {
+            // Logic navigasi tetap sama
             if (activeTab === "group") {
               const proj = groupProjects.find((p) => p.id === project.id);
               if (proj) {
                 const group = groups.find((g) => g.name === proj.groupName);
-                if (group) {
+                if (group)
                   router.push({
                     pathname: "/(tabs)/group/[id]/projects/[projectId]",
                     params: { id: group.id, projectId: project.id },
                   });
-                }
               }
             } else {
               router.push({
@@ -459,7 +382,8 @@ export default function TodoListScreen() {
         />
       </ScrollView>
 
-      {/* Group Selector Modal */}
+      {/* --- MODALS SECTION YANG SUDAH BERSIH --- */}
+
       <DynamicSelectorModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -469,86 +393,19 @@ export default function TodoListScreen() {
         onSelect={handleSelectGroup}
       />
 
-      {/* ================= MODAL PEMILIH BULAN ================= */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <MonthPickerModal
         visible={isMonthPickerVisible}
-        onRequestClose={() => setMonthPickerVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setMonthPickerVisible(false)}
-        >
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerHeader}>Select Month</Text>
-            <View style={styles.monthsGrid}>
-              {monthNames.map((month, index) => (
-                <TouchableOpacity
-                  key={month}
-                  style={[
-                    styles.monthItem,
-                    viewDate.getMonth() === index && styles.selectedItem,
-                  ]}
-                  onPress={() => handleMonthSelect(index)}
-                >
-                  <Text
-                    style={[
-                      styles.pickerItemText,
-                      viewDate.getMonth() === index && styles.selectedItemText,
-                    ]}
-                  >
-                    {month.substring(0, 3)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setMonthPickerVisible(false)}
+        onSelect={handleMonthSelect}
+        currentMonthIndex={viewDate.getMonth()}
+      />
 
-      {/* ================= MODAL PEMILIH TAHUN ================= */}
-      <Modal
-        animationType="fade"
-        transparent={true}
+      <YearPickerModal
         visible={isYearPickerVisible}
-        onRequestClose={() => setYearPickerVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setYearPickerVisible(false)}
-        >
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerHeader}>Select Year</Text>
-            <FlatList
-              data={years}
-              keyExtractor={(item) => item.toString()}
-              style={{ maxHeight: 300, width: "100%" }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.yearItem,
-                    viewDate.getFullYear() === item && styles.selectedItem,
-                  ]}
-                  onPress={() => handleYearSelect(item)}
-                >
-                  <Text
-                    style={[
-                      styles.pickerItemText,
-                      viewDate.getFullYear() === item &&
-                        styles.selectedItemText,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setYearPickerVisible(false)}
+        onSelect={handleYearSelect}
+        currentYear={viewDate.getFullYear()}
+      />
     </View>
   );
 }
@@ -556,71 +413,6 @@ export default function TodoListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFBEB" },
   contentContainer: { flex: 1, zIndex: 0 },
-  centered: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#78350f",
-  },
-
-  /* --- STYLE UNTUK MODAL PICKER --- */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  pickerContainer: {
-    backgroundColor: "white",
-    width: "80%",
-    borderRadius: 20,
-    padding: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  pickerHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 15,
-    color: "#78350f",
-  },
-  monthsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 10,
-  },
-  monthItem: {
-    width: "30%",
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: "center",
-    backgroundColor: "#FFF7ED",
-  },
-  yearItem: {
-    width: "100%",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 5,
-    backgroundColor: "#FFF7ED",
-  },
-  selectedItem: {
-    backgroundColor: "#F97316", // Orange saat dipilih
-  },
-  pickerItemText: {
-    fontSize: 16,
-    color: "#431407",
-  },
-  selectedItemText: {
-    color: "white",
-    fontWeight: "bold",
-  },
+  centered: { justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 12, fontSize: 16, color: "#78350f" },
 });

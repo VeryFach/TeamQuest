@@ -72,6 +72,19 @@ export const ProjectService = {
     return snap.docs.map((d) => d.data() as Project);
   },
 
+  async getUserProjects(userId: string) {
+    const privateProjects = await this.getUserPrivateProjects(userId);
+    const userGroups = await GroupService.getUserGroups(userId);
+
+    const groupProjectsPromises = userGroups.map((group) =>
+      this.getGroupProjects(group.id)
+    );
+    const groupProjectsArrays = await Promise.all(groupProjectsPromises);
+    const groupProjects = groupProjectsArrays.flat();
+
+    return [...privateProjects, ...groupProjects];
+  },
+
   async updateProject(projectId: string, data: Partial<Project>) {
     const ref = doc(db, "projects", projectId);
     await updateDoc(ref, data);

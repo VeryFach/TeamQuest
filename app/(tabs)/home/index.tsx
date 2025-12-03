@@ -6,9 +6,9 @@ import { GroupService } from "@/services/group.service";
 import { ProjectService } from "@/services/project.service";
 import { Task, TaskService } from "@/services/task.service"; // Pastikan ProjectService diimport
 import { Group } from "@/types/group";
-import { onAuthStateChanged } from "@firebase/auth";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
+import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -46,6 +46,7 @@ export default function Home() {
         router.replace("/auth/login");
       }
     });
+    console.log(myProjects);
     return unsubscribe;
   }, []);
 
@@ -56,8 +57,9 @@ export default function Home() {
       setLoading(true);
       const userTasks = await TaskService.getUserTasks(uid);
       const userGroups = await GroupService.getUserGroups(uid);
-      const userProjects = await ProjectService.getUserPrivateProjects(uid);
 
+      const userProjects = await ProjectService.getUserProjects(uid);
+      console.log(userProjects);
       setTasks(userTasks);
       setMyGroups(userGroups);
       setMyProjects(userProjects);
@@ -166,7 +168,12 @@ export default function Home() {
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, gap: 24, paddingBottom: 100 }}
+          contentContainerStyle={{
+            flexGrow: 1, // agar konten bisa full tinggi parent
+            padding: 20,
+            gap: 24,
+            paddingBottom: 0, // hilangkan jarak bawah
+          }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -207,15 +214,14 @@ export default function Home() {
             </View>
           </View>
 
-          {/* Section My Teams/Groups */}
-          <View style={{ marginBottom: 20 }}>
+          <View>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>My Projects</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/group")}>
                 <Text style={styles.viewMore}>view more</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ marginTop: 8, gap: 10 }}>
+            <View style={{ marginTop: 8, gap: 10, marginBottom: 10 }}>
               {projectCards.length > 0 ? (
                 projectCards.map((card) => (
                   <ProjectCard key={card.id} data={card} />
@@ -230,7 +236,6 @@ export default function Home() {
         </ScrollView>
       </View>
 
-      {/* --- REPLACED FAB & MODALS --- */}
       <HomeActionMenu myGroups={myGroups} />
     </View>
   );
@@ -262,16 +267,15 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     width: "100%",
-    maxWidth: 600, // Batas lebar card di desktop/laptop
-    alignSelf: "center", // Tengah di layar lebar
+    maxWidth: 600,
+    alignSelf: "center",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingBottom: 100,
-    minHeight: 500, // Opsional: agar card tidak terlalu pendek di desktop
+    minHeight: "100%", // agar card full tinggi layar
   },
   cardHeader: {
     flexDirection: "row",
@@ -290,7 +294,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   emptyContainer: {
-    padding: 20,
+    // padding: 20,
     alignItems: "center",
     justifyContent: "center",
     borderStyle: "dashed",

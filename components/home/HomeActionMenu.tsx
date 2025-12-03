@@ -72,12 +72,17 @@ export default function HomeActionMenu({ myGroups }: HomeActionMenuProps) {
   };
 
   return (
-    <View>
-      {/* FAB (Floating Action Button) */}
+    <View
+      style={{
+        position: "absolute",
+        right: 0,
+        bottom: 0,
+        zIndex: 999,
+      }}
+    >
       <TouchableOpacity>
         <FAB onPress={() => setIsMenuVisible(true)} />
       </TouchableOpacity>
-
       {/* 1. Main Action Menu Modal */}
       <Modal
         visible={isMenuVisible}
