@@ -6,7 +6,7 @@ import { GroupService } from "@/services/group.service";
 import { ProjectService } from "@/services/project.service";
 import { Task, TaskService } from "@/services/task.service"; // Pastikan ProjectService diimport
 import { Group } from "@/types/group";
-import { onAuthStateChanged } from "@firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";

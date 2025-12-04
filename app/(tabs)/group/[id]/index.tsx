@@ -154,15 +154,15 @@ export default function GroupDetailLayout() {
                     }}
                 />
                 <Tab.Screen
-                    name="Chat"
-                    component={ChatScreen}
-                    initialParams={{ groupId: id }}
-                    options={{
-                        tabBarIcon: ({ color }) => (
-                            <Ionicons name="chatbubble-outline" size={20} color={color} />
-                        ),
-                    }}
-                />
+                name="Chat"
+                options={{
+                    tabBarIcon: ({ color }) => (
+                    <Ionicons name="chatbubble-outline" size={20} color={color} />
+                    ),
+                }}
+                >
+                {() => <ChatScreen groupId={id} />}
+                </Tab.Screen>
             </Tab.Navigator>
         </View>
     );

@@ -25,7 +25,7 @@ import { auth } from "@/firebaseConfig";
 import { Group, GroupService } from "@/services/group.service";
 import { ProjectService } from "@/services/project.service";
 import { TaskService } from "@/services/task.service";
-import { onAuthStateChanged } from "@firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "expo-router";
 
 // Data Bulan

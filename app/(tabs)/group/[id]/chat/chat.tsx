@@ -18,16 +18,10 @@ import { UserService } from "@/services/user.service";
 import { auth } from "@/firebaseConfig";
 import { Timestamp } from "firebase/firestore";
 
-export default function ChatTab() {
+export default function ChatTab({ groupId }: { groupId: string }) {
     // Ambil groupId dari route params (Material Top Tab)
-    const route = useRoute();
-    const routeParams = route.params as { groupId?: string } | undefined;
     
-    // Fallback ke useLocalSearchParams jika tidak ada dari route
-    const { id } = useLocalSearchParams<{ id: string }>();
-    
-    // Prioritaskan groupId dari Material Top Tab params
-    const groupId = routeParams?.groupId || id;
+    console.log("Current groupId:", groupId);
     
     // Ambil user yang sedang login
     const currentUser = auth.currentUser;
@@ -56,27 +50,23 @@ export default function ChatTab() {
 
     // Subscribe to messages from Firebase
     useEffect(() => {
-        if (!groupId || typeof groupId !== 'string') {
-            console.error("Group ID is required:", groupId);
-            setLoading(false);
-            return;
-        }
+        if (!groupId) return;
 
-        console.log("Subscribing to messages for groupId:", groupId);
+        setMessages([]);
+        setLoading(true);
 
         const unsubscribe = ChatService.subscribeToMessages(
             groupId,
             (newMessages) => {
-                console.log("Received messages:", newMessages.length);
-                setMessages(newMessages);
+                setMessages(newMessages.filter(m => m.groupId === groupId));
                 setLoading(false);
-                setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
             }
         );
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            console.log("Unsubscribing from group:", groupId);
+        };
     }, [groupId]);
 
     const handleSend = async () => {
