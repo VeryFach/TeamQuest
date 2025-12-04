@@ -1,5 +1,6 @@
 import { TaskService } from "@/services/task.service";
-import React, { useEffect, useState } from "react";
+import { Unsubscribe } from "firebase/firestore";
+import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface FloatingStatusBarProps {
@@ -16,21 +17,33 @@ export default function FloatingStatusBar({
   const [totalUncompletedTasks, setTotalUncompletedTasks] = useState(0);
   const [totalTasks, setTotalTasks] = useState(0);
 
+  // Ref untuk menyimpan unsubscribe function
+  const unsubscribeRef = useRef<Unsubscribe | null>(null);
+
   useEffect(() => {
-    const fetchUncompletedTasks = async () => {
-      try {
-        const tasks = await TaskService.getUserTasks(userId);
+    if (!userId) return;
+
+    // Cleanup previous subscription
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+
+    // Subscribe ke user tasks - akan auto update saat ada perubahan
+    unsubscribeRef.current = TaskService.subscribeToUserTasks(
+      userId,
+      (tasks) => {
         const uncompleted = tasks.filter((t) => !t.isDone).length;
         setTotalUncompletedTasks(uncompleted);
         setTotalTasks(tasks.length);
-      } catch (error) {
-        console.error("Error fetching uncompleted tasks:", error);
+      }
+    );
+
+    // Cleanup subscription saat unmount
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
       }
     };
-
-    if (userId) {
-      fetchUncompletedTasks();
-    }
   }, [userId]);
 
   const isAllCompleted = totalTasks > 0 && totalUncompletedTasks === 0;

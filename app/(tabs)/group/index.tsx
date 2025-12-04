@@ -1,61 +1,68 @@
-import { useState, useEffect, useCallback } from "react";
-import { Text, View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from "react-native";
-import { useRouter } from "expo-router";
-import { auth } from "@/firebaseConfig";
-import TeamCard from "@/components/group/TeamCard";
 import FAB from "@/components/common/FAB";
+import TeamCard from "@/components/group/TeamCard";
+import { auth } from "@/firebaseConfig";
 import { GroupService } from "@/services/group.service";
-import { UserService, User } from "@/services/user.service";
+import { User, UserService } from "@/services/user.service";
 import { Group } from "@/types/group";
+import { useRouter } from "expo-router";
+import { Unsubscribe } from "firebase/firestore";
+import { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 export default function GroupScreen() {
   const router = useRouter();
   const user = auth.currentUser;
 
   const [groups, setGroups] = useState<Group[]>([]);
-  const [membersData, setMembersData] = useState<{ [groupId: string]: User[] }>({});
+  const [membersData, setMembersData] = useState<{ [groupId: string]: User[] }>(
+    {}
+  );
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch groups dari Firebase
-  const fetchGroups = useCallback(async () => {
+  // Ref untuk menyimpan unsubscribe function
+  const unsubscribeRef = useRef<Unsubscribe | null>(null);
+
+  // Setup realtime listener
+  useEffect(() => {
     if (!user?.uid) {
       setIsLoading(false);
       return;
     }
 
-    try {
-      // Ambil semua grup yang user ini tergabung
-      const userGroups = await GroupService.getUserGroups(user.uid);
-      setGroups(userGroups);
+    setIsLoading(true);
 
-      // Ambil data members untuk setiap grup
-      const membersMap: { [groupId: string]: User[] } = {};
-      
-      for (const group of userGroups) {
-        const members = await UserService.getUsersByIds(group.members);
-        membersMap[group.id] = members;
+    // Subscribe ke user groups - akan auto update saat ada perubahan
+    unsubscribeRef.current = GroupService.subscribeToUserGroups(
+      user.uid,
+      async (userGroups) => {
+        setGroups(userGroups);
+
+        // Ambil data members untuk setiap grup
+        const membersMap: { [groupId: string]: User[] } = {};
+
+        for (const group of userGroups) {
+          const members = await UserService.getUsersByIds(group.members);
+          membersMap[group.id] = members;
+        }
+
+        setMembersData(membersMap);
+        setIsLoading(false);
       }
-      
-      setMembersData(membersMap);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    );
+
+    // Cleanup subscription saat unmount
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
   }, [user?.uid]);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
-
-  // Pull to refresh
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await fetchGroups();
-    setIsRefreshing(false);
-  }, [fetchGroups]);
 
   const handleCardPress = (groupId: string) => {
     router.push(`/group/${groupId}`);
@@ -64,7 +71,7 @@ export default function GroupScreen() {
   // Helper untuk mendapatkan nama members
   const getMemberNames = (groupId: string): string[] => {
     const members = membersData[groupId] || [];
-    return members.map(member => member.displayName);
+    return members.map((member) => member.displayName);
   };
 
   if (isLoading) {
@@ -91,14 +98,6 @@ export default function GroupScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            colors={["#C8733B"]}
-            tintColor="#C8733B"
-          />
-        }
       >
         {groups.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -134,7 +133,7 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 20,
     paddingBottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   headerText: {
     letterSpacing: 2,

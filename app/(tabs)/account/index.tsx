@@ -1,9 +1,14 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
-  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -26,6 +31,7 @@ import { signOutUser } from "@/services/auth.service";
 import { Project, ProjectService } from "@/services/project.service";
 import { Task, TaskService } from "@/services/task.service";
 import { onAuthStateChanged } from "firebase/auth";
+import { Unsubscribe } from "firebase/firestore";
 
 const MONTHS = [
   "Jan",
@@ -87,65 +93,78 @@ export default function AccountScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [dashboardTasks, setDashboardTasks] = useState<Task[]>([]);
   const [dashboardProjects, setDashboardProjects] = useState<Project[]>([]);
   const [prodStructure, setProdStructure] = useState<
     Record<string, any> | undefined
   >();
 
-  const fetchData = async (uid: string) => {
-    try {
-      setLoading(true);
+  // Refs untuk menyimpan unsubscribe functions
+  const unsubscribeRefs = useRef<Unsubscribe[]>([]);
 
-      // 1. Ambil semua task user
-      const userTasks = await TaskService.getUserTasks(uid);
-      setDashboardTasks(userTasks);
+  // Cleanup function
+  const cleanupSubscriptions = useCallback(() => {
+    unsubscribeRefs.current.forEach((unsub) => unsub());
+    unsubscribeRefs.current = [];
+  }, []);
 
-      const prodStruct = getFullProductivityStructure(userTasks);
-      setProdStructure(prodStruct);
+  // Setup realtime listeners
+  const setupRealtimeListeners = useCallback(
+    (uid: string) => {
+      cleanupSubscriptions();
 
-      // 2. Ambil semua project user (private + group)
-      const userProjects = await ProjectService.getUserProjects(uid);
-      setDashboardProjects(userProjects);
+      // Subscribe ke user tasks
+      const taskUnsub = TaskService.subscribeToUserTasks(uid, (userTasks) => {
+        setDashboardTasks(userTasks);
+        const prodStruct = getFullProductivityStructure(userTasks);
+        setProdStructure(prodStruct);
+        setLoading(false);
+      });
+      unsubscribeRefs.current.push(taskUnsub);
 
-      // 3. (Opsional) Hitung statistik untuk dashboard
-      // Misal: total completed, pending, data grafik
-      // Contoh:
+      // Fetch projects (untuk pie chart) - bisa juga di-subscribe jika perlu realtime
+      const fetchProjects = async () => {
+        try {
+          const userProjects = await ProjectService.getUserProjects(uid);
+          setDashboardProjects(userProjects);
+        } catch (error) {
+          console.error("Error fetching projects:", error);
+        }
+      };
+      fetchProjects();
 
-      const pending = userTasks.filter((t) => !t.isDone).length;
+      // Subscribe ke private projects untuk update pie chart
+      const projectUnsub = ProjectService.subscribeToUserPrivateProjects(
+        uid,
+        async () => {
+          // Refetch all projects when private projects change
+          const userProjects = await ProjectService.getUserProjects(uid);
+          setDashboardProjects(userProjects);
+        }
+      );
+      unsubscribeRefs.current.push(projectUnsub);
+    },
+    [cleanupSubscriptions]
+  );
 
-      // 4. (Opsional) Generate data grafik dari userTasks
-      // Misal: jumlah task selesai per hari/minggu/bulan
-      // Simpan ke state jika ingin digunakan di dashboardData
-
-      // ...tambahkan logic sesuai kebutuhan dashboardData...
-    } catch (error) {
-      console.error("Error fetching account data:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-  // 1. Cek Login & Ambil User ID
+  // 1. Cek Login & Setup Realtime Listeners
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
-        fetchData(user.uid);
+        setLoading(true);
+        setupRealtimeListeners(user.uid);
       } else {
+        cleanupSubscriptions();
         router.replace("/auth/login");
       }
     });
-    return unsubscribe;
-  }, []);
 
-  const onRefresh = () => {
-    if (userId) {
-      setRefreshing(true);
-      fetchData(userId);
-    }
-  };
+    return () => {
+      unsubscribe();
+      cleanupSubscriptions();
+    };
+  }, [setupRealtimeListeners, cleanupSubscriptions]);
 
   function getFullProductivityStructure(tasks: Task[]) {
     const doneTasks = tasks.filter((t) => t.isDone);
@@ -449,7 +468,7 @@ export default function AccountScreen() {
   ];
   const totalGoals = pieData.reduce((acc, curr) => acc + curr.population, 0);
 
-  if (loading && !refreshing) {
+  if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color="#C8733B" />
@@ -463,9 +482,6 @@ export default function AccountScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
       >
         <Header />
 

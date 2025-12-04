@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -65,7 +67,6 @@ const getRelativeDate = (date: any): string => {
 };
 
 const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
-  userId,
   type = "group",
   tasks = [],
   onAddPress,
@@ -80,6 +81,10 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ActiveTask | null>(null);
 
+  // State untuk edit modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editTaskName, setEditTaskName] = useState("");
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ x: 0, animated: true });
   }, [type]);
@@ -93,10 +98,24 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
   };
 
   const handleEdit = () => {
-    if (selectedTask && onEditTask) {
-      onEditTask(selectedTask);
+    if (selectedTask) {
+      setEditTaskName(selectedTask.taskName);
+      setModalVisible(false);
+      setEditModalVisible(true);
     }
-    setModalVisible(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (selectedTask && onEditTask) {
+      onEditTask({ ...selectedTask, taskName: editTaskName });
+    }
+    setEditModalVisible(false);
+    setSelectedTask(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditModalVisible(false);
+    setEditTaskName("");
   };
 
   const handleDelete = () => {
@@ -179,6 +198,45 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
         onDelete={handleDelete}
         onComplete={handleComplete}
       />
+
+      {/* Edit Task Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelEdit}
+      >
+        <View style={styles.editModalOverlay}>
+          <View style={styles.editModalContainer}>
+            <Text style={styles.editModalTitle}>Edit Task</Text>
+
+            <Text style={styles.editInputLabel}>Task Name</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editTaskName}
+              onChangeText={setEditTaskName}
+              placeholder="Enter task name"
+              placeholderTextColor="#999"
+              autoFocus
+            />
+
+            <View style={styles.editModalButtons}>
+              <TouchableOpacity
+                style={styles.editCancelButton}
+                onPress={handleCancelEdit}
+              >
+                <Text style={styles.editCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editSaveButton}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.editSaveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 };
@@ -216,7 +274,7 @@ const styles = StyleSheet.create({
     width: 290, // Lebar agar muat teks panjang
     height: 140, // Tinggi agar tidak sempit
     padding: 20,
-    borderRadius: 24, // Radius besar
+    borderRadius: 12,
     marginRight: 15,
 
     // Shadow halus
@@ -243,7 +301,7 @@ const styles = StyleSheet.create({
     fontFamily: "System", // Atau font custom kamu
     fontWeight: "800", // Extra Bold
     color: "#1A1A1A",
-    fontSize: 18,
+    fontSize: 22,
     lineHeight: 22,
     letterSpacing: -0.5,
   },
@@ -295,6 +353,79 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#9ca3af",
     marginTop: 4,
+  },
+
+  // --- EDIT MODAL STYLES ---
+  editModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  editModalContainer: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  editModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1A1A1A",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  editInputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+    marginBottom: 8,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    color: "#1A1A1A",
+    backgroundColor: "#F9F9F9",
+    marginBottom: 20,
+  },
+  editModalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  editCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: "#F0F0F0",
+    alignItems: "center",
+  },
+  editCancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+  },
+  editSaveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: "#000",
+    alignItems: "center",
+  },
+  editSaveButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
   },
 });
 

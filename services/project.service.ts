@@ -4,8 +4,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   setDoc,
+  Unsubscribe,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -121,5 +123,36 @@ export const ProjectService = {
   async isProjectCompleted(projectId: string): Promise<boolean> {
     const tasks: Task[] = await TaskService.getTasks(projectId);
     return tasks.length > 0 && tasks.every((t) => t.isDone);
+  },
+
+  // Realtime listener untuk group projects
+  subscribeToGroupProjects(
+    groupId: string,
+    callback: (projects: Project[]) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, "projects"),
+      where("groupId", "==", groupId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const projects = snapshot.docs.map((d) => d.data() as Project);
+      callback(projects);
+    });
+  },
+
+  // Realtime listener untuk private projects
+  subscribeToUserPrivateProjects(
+    userId: string,
+    callback: (projects: Project[]) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, "projects"),
+      where("projectLeader", "==", userId),
+      where("isPrivate", "==", true)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const projects = snapshot.docs.map((d) => d.data() as Project);
+      callback(projects);
+    });
   },
 };

@@ -3,9 +3,11 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
+  Unsubscribe,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -105,5 +107,32 @@ export const TaskService = {
 
     // 4. Return group name
     return group.name;
+  },
+
+  // Realtime listener untuk user tasks
+  subscribeToUserTasks(
+    userId: string,
+    callback: (tasks: Task[]) => void
+  ): Unsubscribe {
+    const q = query(collection(db, "tasks"), where("assignedTo", "==", userId));
+    return onSnapshot(q, (snapshot) => {
+      const tasks = snapshot.docs.map((d) => d.data() as Task);
+      callback(tasks);
+    });
+  },
+
+  // Realtime listener untuk project tasks
+  subscribeToProjectTasks(
+    projectId: string,
+    callback: (tasks: Task[]) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, "tasks"),
+      where("projectId", "==", projectId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const tasks = snapshot.docs.map((d) => d.data() as Task);
+      callback(tasks);
+    });
   },
 };

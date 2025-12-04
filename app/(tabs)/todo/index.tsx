@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,6 +27,7 @@ import { ProjectService } from "@/services/project.service";
 import { TaskService } from "@/services/task.service";
 import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
+import { Unsubscribe } from "firebase/firestore";
 
 // Interfaces
 interface ProcessedProject {
@@ -60,7 +60,6 @@ export default function TodoListScreen() {
   // Auth & Loading State
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Data State
   const [groups, setGroups] = useState<Group[]>([]);
@@ -83,6 +82,15 @@ export default function TodoListScreen() {
 
   const [activeTab, setActiveTab] = useState<"group" | "private">("group");
 
+  // Refs untuk menyimpan unsubscribe functions
+  const unsubscribeRefs = useRef<Unsubscribe[]>([]);
+
+  // Cleanup function
+  const cleanupSubscriptions = useCallback(() => {
+    unsubscribeRefs.current.forEach((unsub) => unsub());
+    unsubscribeRefs.current = [];
+  }, []);
+
   // Computed values
   const currentTasks = activeTab === "group" ? groupTasks : privateTasks;
   const currentProjects =
@@ -92,44 +100,84 @@ export default function TodoListScreen() {
   const totalUncompletedTasks = incompleteTasks.length;
   const totalAllTasks = currentTasks.length;
 
-  // --- 1. Effects & Fetching Logic (Tetap sama, hanya diringkas untuk brevity) ---
+  // --- 1. Effects & Realtime Listeners ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
-        fetchAllData(user.uid);
+        setupRealtimeListeners(user.uid);
       } else {
+        cleanupSubscriptions();
         router.replace("/auth/login");
       }
     });
-    return unsubscribe;
+
+    return () => {
+      unsubscribe();
+      cleanupSubscriptions();
+    };
   }, []);
 
-  const fetchAllData = async (uid: string) => {
+  const setupRealtimeListeners = async (uid: string) => {
     try {
       setLoading(true);
-      const userGroups = await GroupService.getUserGroups(uid);
-      setGroups(userGroups);
-      await fetchGroupData(uid, userGroups);
-      await fetchPrivateData(uid);
+      cleanupSubscriptions();
+
+      // Subscribe ke user groups
+      const groupUnsub = GroupService.subscribeToUserGroups(
+        uid,
+        async (userGroups) => {
+          setGroups(userGroups);
+          // Fetch group data saat groups berubah
+          await fetchGroupData(uid, userGroups);
+        }
+      );
+      unsubscribeRefs.current.push(groupUnsub);
+
+      // Subscribe ke user tasks untuk update realtime
+      const taskUnsub = TaskService.subscribeToUserTasks(
+        uid,
+        async (userTasks) => {
+          // Update tasks dan recalculate projects
+          const userGroups = await GroupService.getUserGroups(uid);
+          await processTasksAndProjects(uid, userGroups, userTasks);
+        }
+      );
+      unsubscribeRefs.current.push(taskUnsub);
+
+      // Subscribe ke private projects
+      const privateProjectUnsub = ProjectService.subscribeToUserPrivateProjects(
+        uid,
+        async (projects) => {
+          await fetchPrivateData(uid, projects);
+        }
+      );
+      unsubscribeRefs.current.push(privateProjectUnsub);
     } catch (error) {
-      console.error("Error fetching todo data:", error);
+      console.error("Error setting up realtime listeners:", error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const fetchGroupData = async (uid: string, userGroups: Group[]) => {
+  // Process tasks and update project stats
+  const processTasksAndProjects = async (
+    uid: string,
+    userGroups: Group[],
+    userTasks: any[]
+  ) => {
     const allGroupProjects: ProcessedProject[] = [];
     const allGroupTasks: ProcessedTask[] = [];
 
     for (const group of userGroups) {
       const projects = await ProjectService.getGroupProjects(group.id);
       for (const project of projects) {
-        const stats = await ProjectService.getProjectTaskStats(
-          project.projectId
+        const projectTasks = userTasks.filter(
+          (t) => t.projectId === project.projectId
         );
+        const tasks_total = projectTasks.length;
+        const tasks_completed = projectTasks.filter((t) => t.isDone).length;
+
         allGroupProjects.push({
           id: project.projectId,
           name: project.name,
@@ -137,14 +185,15 @@ export default function TodoListScreen() {
           reward: project.reward.name,
           rewardIcon: project.reward.icon,
           bgColor: project.bgColor,
-          tasks_total: stats.tasks_total,
-          tasks_completed: stats.tasks_completed,
+          tasks_total,
+          tasks_completed,
           isPrivate: false,
         });
 
-        const tasks = await TaskService.getTasks(project.projectId);
-        const userTasks = tasks.filter((t) => t.assignedTo === uid);
-        userTasks.forEach((task) => {
+        const userProjectTasks = projectTasks.filter(
+          (t) => t.assignedTo === uid
+        );
+        userProjectTasks.forEach((task) => {
           allGroupTasks.push({
             id: task.id,
             taskName: task.taskName,
@@ -163,12 +212,18 @@ export default function TodoListScreen() {
     setGroupTasks(allGroupTasks);
   };
 
-  const fetchPrivateData = async (uid: string) => {
+  const fetchGroupData = async (uid: string, userGroups: Group[]) => {
+    const userTasks = await TaskService.getUserTasks(uid);
+    await processTasksAndProjects(uid, userGroups, userTasks);
+  };
+
+  const fetchPrivateData = async (uid: string, projects?: any[]) => {
     const allPrivateProjects: ProcessedProject[] = [];
     const allPrivateTasks: ProcessedTask[] = [];
 
-    const projects = await ProjectService.getUserPrivateProjects(uid);
-    for (const project of projects) {
+    const privateProjects =
+      projects || (await ProjectService.getUserPrivateProjects(uid));
+    for (const project of privateProjects) {
       const stats = await ProjectService.getProjectTaskStats(project.projectId);
       allPrivateProjects.push({
         id: project.projectId,
@@ -205,31 +260,51 @@ export default function TodoListScreen() {
     taskId: string,
     currentStatus: boolean
   ) => {
+    // Optimistic update
+    const updateList = (list: ProcessedTask[]) =>
+      list.map((t) => (t.id === taskId ? { ...t, isDone: !currentStatus } : t));
+
+    if (activeTab === "group") setGroupTasks((prev) => updateList(prev));
+    else setPrivateTasks((prev) => updateList(prev));
+
     try {
       await TaskService.updateTask(taskId, { isDone: !currentStatus });
-
-      // Update local state optimistically or re-fetch
-      const updateList = (list: ProcessedTask[]) =>
-        list.map((t) =>
-          t.id === taskId ? { ...t, isDone: !currentStatus } : t
-        );
-
-      if (activeTab === "group") setGroupTasks((prev) => updateList(prev));
-      else setPrivateTasks((prev) => updateList(prev));
-
-      if (userId) {
-        if (activeTab === "group") await fetchGroupData(userId, groups);
-        else await fetchPrivateData(userId);
-      }
+      // Tidak perlu refetch - realtime listener akan handle update
     } catch (error) {
       console.error("Error toggling task:", error);
+      // Rollback on error
+      const rollbackList = (list: ProcessedTask[]) =>
+        list.map((t) =>
+          t.id === taskId ? { ...t, isDone: currentStatus } : t
+        );
+      if (activeTab === "group") setGroupTasks((prev) => rollbackList(prev));
+      else setPrivateTasks((prev) => rollbackList(prev));
     }
   };
 
-  const onRefresh = () => {
-    if (userId) {
-      setRefreshing(true);
-      fetchAllData(userId);
+  const handleDeleteTask = async (task: ProcessedTask) => {
+    // Optimistic update
+    if (activeTab === "group") {
+      setGroupTasks((prev) => prev.filter((t) => t.id !== task.id));
+    } else {
+      setPrivateTasks((prev) => prev.filter((t) => t.id !== task.id));
+    }
+
+    try {
+      await TaskService.deleteTask(task.id);
+      // Tidak perlu refetch - realtime listener akan handle update
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      // Could add rollback logic here if needed
+    }
+  };
+
+  const handleEditTask = async (task: ProcessedTask) => {
+    try {
+      await TaskService.updateTask(task.id, { taskName: task.taskName });
+      // Tidak perlu refetch - realtime listener akan handle update
+    } catch (error) {
+      console.error("Error editing task:", error);
     }
   };
 
@@ -284,13 +359,6 @@ export default function TodoListScreen() {
         style={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#F97316"]}
-          />
-        }
       >
         <Header
           dateLabel={getHeaderDateLabel()}
@@ -326,28 +394,8 @@ export default function TodoListScreen() {
         <ActiveTaskCard
           type={activeTab}
           tasks={incompleteTasks}
-          onAddPress={() => setModalVisible(true)}
-          onTaskPress={(task) => {
-            // Logic navigasi tetap sama
-            if (activeTab === "group") {
-              const project = groupProjects.find(
-                (p) => p.id === task.projectId
-              );
-              if (project) {
-                const group = groups.find((g) => g.name === project.groupName);
-                if (group)
-                  router.push({
-                    pathname: "/(tabs)/group/[id]/projects/[projectId]",
-                    params: { id: group.id, projectId: task.projectId },
-                  });
-              }
-            } else {
-              router.push({
-                pathname: "/(tabs)/todo/personal-project/[projectId]",
-                params: { projectId: task.projectId },
-              });
-            }
-          }}
+          onDeleteTask={handleDeleteTask}
+          onEditTask={handleEditTask}
           onCompleteTask={(task) => toggleTaskCompletion(task.id, task.isDone)}
         />
 

@@ -8,11 +8,20 @@ import { Task, TaskService } from "@/services/task.service"; // Pastikan Project
 import { Group } from "@/types/group";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
-import React, { useEffect, useMemo, useState } from "react";
+import {
+  Unsubscribe as AuthUnsubscribe,
+  onAuthStateChanged,
+} from "firebase/auth";
+import { Unsubscribe } from "firebase/firestore";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,7 +33,6 @@ export default function Home() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Data State
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -36,36 +44,119 @@ export default function Home() {
     [taskId: string]: string | null;
   }>({});
 
-  // 1. Cek Login & Ambil User ID
+  // Refs untuk menyimpan unsubscribe functions
+  const unsubscribeRefs = useRef<Unsubscribe[]>([]);
+
+  // Cleanup function untuk unsubscribe semua listeners
+  const cleanupSubscriptions = useCallback(() => {
+    unsubscribeRefs.current.forEach((unsub) => unsub());
+    unsubscribeRefs.current = [];
+  }, []);
+
+  // 1. Cek Login & Setup Realtime Listeners
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    let authUnsubscribe: AuthUnsubscribe;
+
+    authUnsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
-        fetchData(user.uid);
+        setupRealtimeListeners(user.uid);
       } else {
+        cleanupSubscriptions();
         router.replace("/auth/login");
       }
     });
-    return unsubscribe;
+
+    return () => {
+      authUnsubscribe();
+      cleanupSubscriptions();
+    };
   }, []);
 
-  // 2. Fungsi Fetch Data dari Firebase
-
-  const fetchData = async (uid: string) => {
+  // 2. Setup Realtime Listeners
+  const setupRealtimeListeners = async (uid: string) => {
     try {
       setLoading(true);
+
+      // Cleanup existing subscriptions
+      cleanupSubscriptions();
+
+      // Subscribe ke user tasks - akan auto update saat ada perubahan
+      const taskUnsub = TaskService.subscribeToUserTasks(
+        uid,
+        async (userTasks) => {
+          setTasks(userTasks);
+
+          // Update group names untuk tasks yang ditampilkan
+          const shownTasks = userTasks.slice(0, 5);
+          const groupNameMap: { [taskId: string]: string | null } = {};
+          await Promise.all(
+            shownTasks.map(async (task) => {
+              const groupName = await TaskService.getGroupNameByTaskId(task.id);
+              groupNameMap[task.id] = groupName;
+            })
+          );
+          setTaskGroupNames(groupNameMap);
+        }
+      );
+      unsubscribeRefs.current.push(taskUnsub);
+
+      // Subscribe ke user groups - akan auto update saat ada perubahan
+      const groupUnsub = GroupService.subscribeToUserGroups(
+        uid,
+        async (userGroups) => {
+          setMyGroups(userGroups);
+
+          // Ketika groups berubah, update projects juga
+          await updateProjectsFromGroups(uid, userGroups);
+        }
+      );
+      unsubscribeRefs.current.push(groupUnsub);
+
+      // Initial fetch untuk private projects (akan di-update saat groups change)
+      const privateUnsub = ProjectService.subscribeToUserPrivateProjects(
+        uid,
+        async (privateProjects) => {
+          // Merge dengan group projects
+          const userGroups = await GroupService.getUserGroups(uid);
+          await updateProjectsFromGroups(uid, userGroups, privateProjects);
+        }
+      );
+      unsubscribeRefs.current.push(privateUnsub);
+    } catch (error) {
+      console.error("Error setting up realtime listeners:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function untuk update projects dari groups
+  const updateProjectsFromGroups = async (
+    uid: string,
+    userGroups: Group[],
+    privateProjectsOverride?: any[]
+  ) => {
+    try {
+      const privateProjects =
+        privateProjectsOverride ||
+        (await ProjectService.getUserPrivateProjects(uid));
+
+      // Get group projects
+      const groupProjectsPromises = userGroups.map((group) =>
+        ProjectService.getGroupProjects(group.id)
+      );
+      const groupProjectsArrays = await Promise.all(groupProjectsPromises);
+      const groupProjects = groupProjectsArrays.flat();
+
+      const allProjects = [...privateProjects, ...groupProjects];
+      setMyProjects(allProjects);
+
+      // Get current tasks untuk stats
       const userTasks = await TaskService.getUserTasks(uid);
-      const userGroups = await GroupService.getUserGroups(uid);
 
-      const userProjects = await ProjectService.getUserProjects(uid);
-      setTasks(userTasks);
-      setMyGroups(userGroups);
-      setMyProjects(userProjects);
-
-      // Ambil data group name dan stats untuk setiap project
+      // Build project cards dengan group names dan stats
       const cards = await Promise.all(
-        userProjects.map(async (project) => {
-          console.log(project);
+        allProjects.map(async (project) => {
           const group = await GroupService.getGroup(project.groupId);
           const projectTasks = userTasks.filter(
             (t) => t.projectId === project.projectId
@@ -85,24 +176,40 @@ export default function Home() {
         })
       );
       setProjectCards(cards);
-
-      // Ambil group name untuk setiap task (hanya untuk task yang akan ditampilkan)
-      const shownTasks = userTasks.slice(0, 5);
-      const groupNameMap: { [taskId: string]: string | null } = {};
-      await Promise.all(
-        shownTasks.map(async (task) => {
-          const groupName = await TaskService.getGroupNameByTaskId(task.id);
-          groupNameMap[task.id] = groupName;
-        })
-      );
-      setTaskGroupNames(groupNameMap);
     } catch (error) {
-      console.error("Error fetching home data:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.error("Error updating projects:", error);
     }
   };
+
+  // Update project cards ketika tasks berubah
+  useEffect(() => {
+    if (userId && myProjects.length > 0) {
+      const updateCards = async () => {
+        const cards = await Promise.all(
+          myProjects.map(async (project) => {
+            const group = await GroupService.getGroup(project.groupId);
+            const projectTasks = tasks.filter(
+              (t) => t.projectId === project.projectId
+            );
+            const tasks_total = projectTasks.length;
+            const tasks_completed = projectTasks.filter((t) => t.isDone).length;
+
+            return {
+              bgColor: project.bgColor,
+              id: project.projectId,
+              group_name: group ? group.name : "-",
+              reward: project.reward.name,
+              reward_emot: project.reward.icon,
+              tasks_total,
+              tasks_completed,
+            };
+          })
+        );
+        setProjectCards(cards);
+      };
+      updateCards();
+    }
+  }, [tasks, myProjects]);
 
   // Helper: Hitung jumlah task selesai dan total task per project
   const getProjectTaskStats = (projectId: string) => {
@@ -112,26 +219,22 @@ export default function Home() {
     return { tasks_total, tasks_completed };
   };
 
-  const onRefresh = () => {
-    if (userId) {
-      setRefreshing(true);
-      fetchData(userId);
-    }
-  };
-
-  // 3. Logic Toggle Task
+  // 3. Logic Toggle Task (optimistic update + sync ke server)
   const toggleTaskCompletion = async (
     taskId: string,
     currentStatus: boolean
   ) => {
+    // Optimistic update - langsung update UI
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, isDone: !currentStatus } : t))
     );
 
     try {
       await TaskService.updateTask(taskId, { isDone: !currentStatus });
+      // Tidak perlu fetch ulang - realtime listener akan otomatis update
     } catch (error) {
       console.error("Failed to update task", error);
+      // Rollback jika gagal
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, isDone: currentStatus } : t))
       );
@@ -148,7 +251,7 @@ export default function Home() {
 
   // --- RENDER ---
 
-  if (loading && !refreshing) {
+  if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color="#C8733B" />
@@ -175,9 +278,6 @@ export default function Home() {
             paddingBottom: 0, // hilangkan jarak bawah
           }}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
         >
           {/* Section My Tasks Today */}
           <View>
