@@ -10,38 +10,54 @@ interface TeamCardProps {
     onPress: () => void;
 }
 
-export default function TeamCard({ title, members, projects, onPress }: TeamCardProps) {
-    return (
-        <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+const isHexColor = (color: string) => /^#([0-9A-F]{3}){1,2}$/i.test(color);
+
+export default function TeamCard({ title, bgColor, members, projects, onPress }: TeamCardProps) {
+
+    const renderBackground = () => {
+        if (isHexColor(bgColor)) {
+            return (
+                <View style={[styles.cardBackground, { backgroundColor: bgColor }]}>
+                    {renderGradientContent()}
+                </View>
+            );
+        }
+
+        return (
             <ImageBackground
-                source={require('@/assets/images/background.png')}
+                source={{ uri: bgColor }}
                 style={styles.cardBackground}
                 imageStyle={styles.cardBackgroundImage}
             >
-                <LinearGradient
-                    colors={['rgba(0,0,0,0.4)', 'rgba(119,65,0,0.8)']}
-                    locations={[0, 1]}
-                    style={styles.cardGradient}
-                >
-                    <Text style={styles.cardTitle}>{title}</Text>
-
-                    <View style={styles.cardInfo}>
-                        <Text style={styles.cardLabel}>Projects:</Text>
-                        <Text style={styles.cardProject}>
-                            {projects.join(', ')}
-                        </Text>
-
-                        <View style={styles.membersRow}>
-                            <Ionicons
-                                    name="people"
-                                    size={16}
-                                    color="#ffffffff"
-                            />
-                            <Text style={styles.cardMembers}>{members.length} Members</Text>
-                        </View>
-                    </View>
-                </LinearGradient>
+                {renderGradientContent()}
             </ImageBackground>
+        );
+    };
+
+    const renderGradientContent = () => (
+        <LinearGradient
+            colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.85)']}
+            style={styles.cardGradient}
+        >
+            <Text style={styles.cardTitle}>{title}</Text>
+
+            <View style={styles.cardInfo}>
+                <Text style={styles.cardLabel}>Projects:</Text>
+                <Text style={styles.cardProject}>
+                    {projects.join(', ')}
+                </Text>
+
+                <View style={styles.membersRow}>
+                    <Ionicons name="people" size={16} color="#ffffff" />
+                    <Text style={styles.cardMembers}>{members.length} Members</Text>
+                </View>
+            </View>
+        </LinearGradient>
+    );
+
+    return (
+        <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+            {renderBackground()}
         </TouchableOpacity>
     );
 }
@@ -66,13 +82,11 @@ const styles = StyleSheet.create({
     cardBackgroundImage: {
         borderRadius: 16,
     },
-    // Make the gradient container relative so children can be absolutely positioned
     cardGradient: {
         flex: 1,
         padding: 20,
         position: 'relative',
     },
-    // Position title at the top with explicit top offset
     cardTitle: {
         position: 'absolute',
         top: 80,
@@ -85,13 +99,11 @@ const styles = StyleSheet.create({
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 3,
     },
-    // Position info block at the bottom with explicit bottom offset
     cardInfo: {
         position: 'absolute',
         bottom: 20,
         left: 20,
         right: 20,
-        // keep small spacing between children; if gap isn't supported, use margins on children
         gap: 4,
     },
     cardLabel: {
@@ -110,9 +122,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 6,
         marginTop: 4,
-    },
-    memberIcon: {
-        fontSize: 14,
     },
     cardMembers: {
         fontSize: 15,
