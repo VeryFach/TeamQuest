@@ -1,25 +1,58 @@
-import { useProjectFilter } from "@/hooks/useProjectFilter";
-import React from "react";
+import { TaskService } from "@/services/task.service";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface FloatingStatusBarProps {
   activeTab: "group" | "private";
   onTabChange: (tab: "group" | "private") => void;
+  userId: string;
 }
 
 export default function FloatingStatusBar({
   activeTab,
   onTabChange,
+  userId,
 }: FloatingStatusBarProps) {
-  // Ambil totalTasksCount dari hook yang sudah diupdate
-  const { totalUncompletedTasks } = useProjectFilter(activeTab);
+  const [totalUncompletedTasks, setTotalUncompletedTasks] = useState(0);
+  const [totalTasks, setTotalTasks] = useState(0);
+
+  useEffect(() => {
+    const fetchUncompletedTasks = async () => {
+      try {
+        const tasks = await TaskService.getUserTasks(userId);
+        const uncompleted = tasks.filter((t) => !t.isDone).length;
+        setTotalUncompletedTasks(uncompleted);
+        setTotalTasks(tasks.length);
+      } catch (error) {
+        console.error("Error fetching uncompleted tasks:", error);
+      }
+    };
+
+    if (userId) {
+      fetchUncompletedTasks();
+    }
+  }, [userId]);
+
+  const isAllCompleted = totalTasks > 0 && totalUncompletedTasks === 0;
 
   return (
     <View style={styles.floatingBarContainer}>
       {/* Badge sekarang menampilkan Total Tasks */}
-      <View style={styles.unfinishedBadge}>
-        <Text style={styles.unfinishedText}>
-          ! {totalUncompletedTasks} Uncompleted
+      <View
+        style={[
+          styles.unfinishedBadge,
+          isAllCompleted && styles.completedBadge,
+        ]}
+      >
+        <Text
+          style={[
+            styles.unfinishedText,
+            isAllCompleted && styles.completedText,
+          ]}
+        >
+          {isAllCompleted
+            ? "🎉 All Done!"
+            : `! ${totalUncompletedTasks} Uncompleted`}
         </Text>
       </View>
 
@@ -90,10 +123,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     right: 10,
   },
+  completedBadge: {
+    backgroundColor: "#4ADE80",
+  },
   unfinishedText: {
     color: "#6A1D0C",
     fontWeight: "900",
     fontSize: 15,
+  },
+  completedText: {
+    color: "#166534",
   },
   // --- Style Toggle Group/Private ---
   filterGroup: {

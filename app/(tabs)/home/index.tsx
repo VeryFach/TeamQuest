@@ -46,7 +46,6 @@ export default function Home() {
         router.replace("/auth/login");
       }
     });
-    console.log(myProjects);
     return unsubscribe;
   }, []);
 
@@ -59,7 +58,6 @@ export default function Home() {
       const userGroups = await GroupService.getUserGroups(uid);
 
       const userProjects = await ProjectService.getUserProjects(uid);
-      console.log(userProjects);
       setTasks(userTasks);
       setMyGroups(userGroups);
       setMyProjects(userProjects);
@@ -67,6 +65,7 @@ export default function Home() {
       // Ambil data group name dan stats untuk setiap project
       const cards = await Promise.all(
         userProjects.map(async (project) => {
+          console.log(project);
           const group = await GroupService.getGroup(project.groupId);
           const projectTasks = userTasks.filter(
             (t) => t.projectId === project.projectId
@@ -75,6 +74,7 @@ export default function Home() {
           const tasks_completed = projectTasks.filter((t) => t.isDone).length;
 
           return {
+            bgColor: project.bgColor,
             id: project.projectId,
             group_name: group ? group.name : "-",
             reward: project.reward.name,
@@ -224,7 +224,11 @@ export default function Home() {
             <View style={{ marginTop: 8, gap: 10, marginBottom: 150 }}>
               {projectCards.length > 0 ? (
                 projectCards.map((card) => (
-                  <ProjectCard key={card.id} data={card} />
+                  <ProjectCard
+                    key={card.id}
+                    data={card}
+                    customBgColor={card.bgColor}
+                  />
                 ))
               ) : (
                 <View style={styles.emptyContainer}>

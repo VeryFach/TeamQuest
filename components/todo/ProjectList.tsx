@@ -13,10 +13,9 @@ import ProjectCard from "@/components/home/ProjectCard";
 
 interface ProjectData {
   id: string;
-  group_name: string;
-  title: string;
+  groupName: string;
   reward: string;
-  reward_emot: string;
+  rewardIcon: string;
   tasks_total: number;
   tasks_completed: number;
   bgColor?: string;
@@ -83,9 +82,9 @@ export default function ProjectList({
             <ProjectCard
               data={{
                 id: project.id,
-                group_name: project.group_name,
+                group_name: project.groupName,
                 reward: project.reward,
-                reward_emot: project.reward_emot,
+                reward_emot: project.rewardIcon,
                 tasks_total: project.tasks_total,
                 tasks_completed: project.tasks_completed,
               }}

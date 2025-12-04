@@ -125,8 +125,9 @@ const ActiveTaskCard: React.FC<ActiveTaskCardProps> = ({
         {/* Tombol Add Task - Style Dashed */}
         <TouchableOpacity style={styles.addCard} onPress={onAddPress}>
           <View style={styles.addIconCircle}>
-            <Ionicons name={"add"} size={32} color="#4A4A4A" />
+            <Ionicons name="add" size={30} color="#000000" />
           </View>
+          <Text style={styles.addCardText}>Add Task</Text>
         </TouchableOpacity>
 
         {/* Render Active Tasks */}
@@ -188,23 +189,25 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginBottom: 5,
   },
+  addCardText: { fontWeight: "bold", color: "#000000", fontSize: 12 },
   // --- ADD BUTTON STYLE ---
   addCard: {
-    width: 80, // Lebih kecil/ramping untuk tombol add
-    height: 140, // Tinggi disamakan dengan card
-    borderColor: "#A0A0A0",
+    width: 110,
+    height: 140,
+    backgroundColor: "rgba(255,255,255,0.6)",
     borderWidth: 2,
+    borderColor: "#000000",
     borderStyle: "dashed",
-    borderRadius: 24,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 15,
-    backgroundColor: "transparent",
   },
   addIconCircle: {
     backgroundColor: "#F0F0F0",
     padding: 10,
     borderRadius: 50,
+    marginBottom: 10,
   },
 
   // --- MAIN CARD STYLE (Seperti Desain) ---

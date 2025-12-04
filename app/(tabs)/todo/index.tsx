@@ -316,7 +316,11 @@ export default function TodoListScreen() {
           />
         </Header>
 
-        <FloatingStatusBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <FloatingStatusBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          userId={userId || ""}
+        />
 
         {/* Active Tasks */}
         <ActiveTaskCard
