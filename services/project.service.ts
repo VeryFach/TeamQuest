@@ -23,6 +23,7 @@ export interface Project {
   groupId: string;
   bgColor: string;
   isPrivate: boolean;
+  isDone: boolean;
   name: string;
   projectId: string;
   projectLeader: string;
@@ -30,11 +31,14 @@ export interface Project {
 }
 
 export const ProjectService = {
-  async createProject(data: Omit<Project, "projectId" | "createdAt">) {
+  async createProject(
+    data: Omit<Project, "projectId" | "createdAt" | "isDone">
+  ) {
     const ref = doc(collection(db, "projects"));
     const newData: Project = {
       projectId: ref.id,
       createdAt: Date.now(),
+      isDone: false,
       ...data,
     };
     await setDoc(ref, newData);
@@ -102,5 +106,20 @@ export const ProjectService = {
     const tasks_total = tasks.length;
     const tasks_completed = tasks.filter((t) => t.isDone).length;
     return { tasks_total, tasks_completed };
+  },
+
+  async checkAndUpdateProjectCompletion(projectId: string): Promise<boolean> {
+    const tasks: Task[] = await TaskService.getTasks(projectId);
+
+    // Project is done only if there are tasks and all are completed
+    const isDone = tasks.length > 0 && tasks.every((t) => t.isDone);
+
+    await this.updateProject(projectId, { isDone });
+    return isDone;
+  },
+
+  async isProjectCompleted(projectId: string): Promise<boolean> {
+    const tasks: Task[] = await TaskService.getTasks(projectId);
+    return tasks.length > 0 && tasks.every((t) => t.isDone);
   },
 };

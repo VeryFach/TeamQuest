@@ -62,6 +62,24 @@ export const TaskService = {
   async updateTask(taskId: string, data: Partial<Task>) {
     const ref = doc(db, "tasks", taskId);
     await updateDoc(ref, data);
+
+    // If task isDone status changed, update project completion status
+    if (data.isDone !== undefined) {
+      // Get the task to find projectId
+      const q = query(collection(db, "tasks"), where("id", "==", taskId));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const task = snap.docs[0].data() as Task;
+
+        if (data.isDone === true) {
+          // Check if all tasks are done, then mark project as done
+          await ProjectService.checkAndUpdateProjectCompletion(task.projectId);
+        } else {
+          // Task unchecked, so project cannot be done
+          await ProjectService.updateProject(task.projectId, { isDone: false });
+        }
+      }
+    }
   },
 
   async deleteTask(taskId: string) {

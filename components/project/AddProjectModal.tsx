@@ -1,6 +1,8 @@
+import { User } from "@/services/user.service";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   ScrollView,
   StyleSheet,
@@ -8,9 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
-import { User } from "@/services/user.service";
 
 interface Props {
   visible: boolean;
@@ -29,8 +29,16 @@ export interface ProjectFormData {
 }
 
 const COLORS = [
-  "#3A7D44", "#CC5500", "#5C3D7A", "#C8733B", "#5c3d2e",
-  "#2196F3", "#E91E63", "#9C27B0", "#FF9800", "#607D8B"
+  "#3A7D44",
+  "#CC5500",
+  "#5C3D7A",
+  "#C8733B",
+  "#5c3d2e",
+  "#2196F3",
+  "#E91E63",
+  "#9C27B0",
+  "#FF9800",
+  "#607D8B",
 ];
 
 export default function AddProjectModal({
@@ -45,7 +53,7 @@ export default function AddProjectModal({
   const [iconReward, setIconReward] = useState("");
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [tasks, setTasks] = useState<{ name: string; assigneeId: string }[]>([
-    { name: "", assigneeId: members[0]?.id || "" }
+    { name: "", assigneeId: members[0]?.id || "" },
   ]);
   const [dropdownVisible, setDropdownVisible] = useState<number | null>(null);
 
@@ -75,7 +83,7 @@ export default function AddProjectModal({
   };
 
   const getMemberName = (memberId: string) => {
-    const member = members.find(m => m.id === memberId);
+    const member = members.find((m) => m.id === memberId);
     return member?.displayName || "Select";
   };
 
@@ -86,13 +94,13 @@ export default function AddProjectModal({
 
   const handleSubmit = () => {
     if (!projectName.trim()) return;
-    
+
     onSubmit({
       projectName: projectName.trim(),
       projectReward: projectReward.trim(),
       iconReward: iconReward.trim() || "🎯",
       bgColor: selectedColor,
-      tasks: tasks.filter(t => t.name.trim() !== ""),
+      tasks: tasks.filter((t) => t.name.trim() !== ""),
     });
 
     // Reset form
@@ -114,7 +122,7 @@ export default function AddProjectModal({
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent
       visible={visible}
       onRequestClose={handleClose}
@@ -233,7 +241,8 @@ export default function AddProjectModal({
                           key={member.id}
                           style={[
                             styles.dropdownItem,
-                            task.assigneeId === member.id && styles.dropdownItemActive,
+                            task.assigneeId === member.id &&
+                              styles.dropdownItemActive,
                           ]}
                           onPress={() => updateTaskAssignee(index, member.id)}
                         >
@@ -241,7 +250,8 @@ export default function AddProjectModal({
                             <Text
                               style={[
                                 styles.dropdownItemText,
-                                task.assigneeId === member.id && styles.dropdownItemTextActive,
+                                task.assigneeId === member.id &&
+                                  styles.dropdownItemTextActive,
                               ]}
                             >
                               {member.displayName}
@@ -251,7 +261,11 @@ export default function AddProjectModal({
                             </Text>
                           </View>
                           {task.assigneeId === member.id && (
-                            <Ionicons name="checkmark" size={18} color="#C8733B" />
+                            <Ionicons
+                              name="checkmark"
+                              size={18}
+                              color="#C8733B"
+                            />
                           )}
                         </TouchableOpacity>
                       ))}
@@ -287,7 +301,7 @@ export default function AddProjectModal({
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (!projectName.trim() || isLoading) && styles.submitButtonDisabled
+              (!projectName.trim() || isLoading) && styles.submitButtonDisabled,
             ]}
             onPress={handleSubmit}
             activeOpacity={0.8}

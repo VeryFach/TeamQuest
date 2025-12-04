@@ -221,7 +221,7 @@ export default function Home() {
                 <Text style={styles.viewMore}>view more</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ marginTop: 8, gap: 10, marginBottom: 10 }}>
+            <View style={{ marginTop: 8, gap: 10, marginBottom: 150 }}>
               {projectCards.length > 0 ? (
                 projectCards.map((card) => (
                   <ProjectCard key={card.id} data={card} />

@@ -6,7 +6,9 @@ import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 // Pastikan path import ini sesuai dengan struktur project Anda
 import FAB from "@/components/common/FAB";
 import DynamicSelectorModal from "@/components/todo/DynamicSelectorModal";
+import { useGroupProjects } from "@/hooks/useGroupProjects";
 import { Group } from "@/services/group.service";
+import AddProjectModal from "../project/AddProjectModal";
 
 interface HomeActionMenuProps {
   myGroups: Group[];
@@ -19,11 +21,26 @@ export default function HomeActionMenu({ myGroups }: HomeActionMenuProps) {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isTypeSelectorVisible, setIsTypeSelectorVisible] = useState(false);
   const [isGroupSelectorVisible, setIsGroupSelectorVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
 
   // Context state
   const [actionContext, setActionContext] = useState<"task" | "project" | null>(
     null
   );
+
+  const {
+    projects,
+    members,
+    isLoading,
+    isSubmitting,
+    handleSubmitProject,
+    uniqueRewards,
+    filterByReward,
+    setFilterByReward,
+    filteredProjects,
+    handleClearFilters,
+  } = useGroupProjects(selectedGroup?.id);
 
   // --- LOGIC NAVIGASI ---
 
@@ -64,10 +81,8 @@ export default function HomeActionMenu({ myGroups }: HomeActionMenuProps) {
         params: { id: group.id },
       });
     } else if (actionContext === "project") {
-      router.push({
-        pathname: "/(tabs)/group/[id]/projects/create",
-        params: { id: group.id },
-      });
+      setSelectedGroup(group);
+      setModalVisible(true);
     }
   };
 
@@ -80,6 +95,13 @@ export default function HomeActionMenu({ myGroups }: HomeActionMenuProps) {
         zIndex: 999,
       }}
     >
+      <AddProjectModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={handleSubmitProject}
+        members={members}
+        isLoading={isSubmitting}
+      />
       <TouchableOpacity>
         <FAB onPress={() => setIsMenuVisible(true)} />
       </TouchableOpacity>
@@ -129,7 +151,7 @@ export default function HomeActionMenu({ myGroups }: HomeActionMenuProps) {
       <Modal
         visible={isTypeSelectorVisible}
         transparent={true}
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setIsTypeSelectorVisible(false)}
       >
         <TouchableOpacity
