@@ -4,8 +4,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   setDoc,
+  Unsubscribe,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -23,6 +25,7 @@ export interface Project {
   groupId: string;
   bgColor: string;
   isPrivate: boolean;
+  isDone: boolean;
   name: string;
   projectId: string;
   projectLeader: string;
@@ -30,11 +33,14 @@ export interface Project {
 }
 
 export const ProjectService = {
-  async createProject(data: Omit<Project, "projectId" | "createdAt">) {
+  async createProject(
+    data: Omit<Project, "projectId" | "createdAt" | "isDone">
+  ) {
     const ref = doc(collection(db, "projects"));
     const newData: Project = {
       projectId: ref.id,
       createdAt: Date.now(),
+      isDone: false,
       ...data,
     };
     await setDoc(ref, newData);
@@ -72,6 +78,19 @@ export const ProjectService = {
     return snap.docs.map((d) => d.data() as Project);
   },
 
+  async getUserProjects(userId: string) {
+    const privateProjects = await this.getUserPrivateProjects(userId);
+    const userGroups = await GroupService.getUserGroups(userId);
+
+    const groupProjectsPromises = userGroups.map((group) =>
+      this.getGroupProjects(group.id)
+    );
+    const groupProjectsArrays = await Promise.all(groupProjectsPromises);
+    const groupProjects = groupProjectsArrays.flat();
+
+    return [...privateProjects, ...groupProjects];
+  },
+
   async updateProject(projectId: string, data: Partial<Project>) {
     const ref = doc(db, "projects", projectId);
     await updateDoc(ref, data);
@@ -89,5 +108,51 @@ export const ProjectService = {
     const tasks_total = tasks.length;
     const tasks_completed = tasks.filter((t) => t.isDone).length;
     return { tasks_total, tasks_completed };
+  },
+
+  async checkAndUpdateProjectCompletion(projectId: string): Promise<boolean> {
+    const tasks: Task[] = await TaskService.getTasks(projectId);
+
+    // Project is done only if there are tasks and all are completed
+    const isDone = tasks.length > 0 && tasks.every((t) => t.isDone);
+
+    await this.updateProject(projectId, { isDone });
+    return isDone;
+  },
+
+  async isProjectCompleted(projectId: string): Promise<boolean> {
+    const tasks: Task[] = await TaskService.getTasks(projectId);
+    return tasks.length > 0 && tasks.every((t) => t.isDone);
+  },
+
+  // Realtime listener untuk group projects
+  subscribeToGroupProjects(
+    groupId: string,
+    callback: (projects: Project[]) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, "projects"),
+      where("groupId", "==", groupId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const projects = snapshot.docs.map((d) => d.data() as Project);
+      callback(projects);
+    });
+  },
+
+  // Realtime listener untuk private projects
+  subscribeToUserPrivateProjects(
+    userId: string,
+    callback: (projects: Project[]) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, "projects"),
+      where("projectLeader", "==", userId),
+      where("isPrivate", "==", true)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const projects = snapshot.docs.map((d) => d.data() as Project);
+      callback(projects);
+    });
   },
 };

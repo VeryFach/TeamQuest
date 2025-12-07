@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 25,
     backgroundColor: "rgba(251, 146, 60, 0.2)",
-    marginBottom: 10,
+    marginBottom: 20,
     marginTop: 10,
   },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#78350f" },
