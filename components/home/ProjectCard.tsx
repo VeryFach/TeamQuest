@@ -25,28 +25,28 @@ interface ProjectCardProps {
   customBgColor?: string;
 }
 
-const colorMap: { [key: string]: string } = {
-  "🎮": "#3A7D44",
-  "🍕": "#CC5500",
-  "🏆": "#FFD700",
-  "🥳": "#FF69B4",
-  "🎥": "#5C3D7A",
-};
-
-const getBackgroundColor = (emot: string): string => {
-  return colorMap[emot] || "#607D8B";
-};
-
-const getAccentColor = (emot: string): string => {
-  if (emot === "🎮") return "#66BB6A";
-  if (emot === "🍕") return "#FF7043";
-  if (emot === "🏆") return "#FFE082";
-  if (emot === "🥳") return "#F06292";
-  if (emot === "🎥") return "#9575CD";
-  return "#90A4AE";
-};
-
 const { width } = Dimensions.get("window");
+
+// Helper function to darken a hex color
+const darkenColor = (hex: string, amount: number = 30): string => {
+  // Remove # if present
+  const color = hex.replace("#", "");
+
+  // Parse RGB values
+  let r = parseInt(color.substring(0, 2), 16);
+  let g = parseInt(color.substring(2, 4), 16);
+  let b = parseInt(color.substring(4, 6), 16);
+
+  // Subtract amount (darken), ensuring we don't go below 0
+  r = Math.max(0, r - amount);
+  g = Math.max(0, g - amount);
+  b = Math.max(0, b - amount);
+
+  // Convert back to hex
+  return `#${r.toString(16).padStart(2, "0")}${g
+    .toString(16)
+    .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+};
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
   data,
@@ -59,8 +59,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   const { id, group_name, reward, reward_emot, tasks_total, tasks_completed } =
     data;
 
-  const backgroundColor = customBgColor || getBackgroundColor(reward_emot);
-  const accentColor = getAccentColor(reward_emot);
+  const backgroundColor = customBgColor;
+  const accentColor = customBgColor
+    ? darkenColor(customBgColor, 30)
+    : "#333333";
   const progress = tasks_total > 0 ? tasks_completed / tasks_total : 0;
 
   // 1. Hitung Faktor Skala (0.8, 1.0, 1.2, dll)
@@ -73,6 +75,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     if (onPress) {
       onPress(id);
     } else {
+      console.log(id);
       router.push({
         pathname: "/group/[id]",
         params: { id },

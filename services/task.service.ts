@@ -3,9 +3,11 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
+  Unsubscribe,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -62,6 +64,24 @@ export const TaskService = {
   async updateTask(taskId: string, data: Partial<Task>) {
     const ref = doc(db, "tasks", taskId);
     await updateDoc(ref, data);
+
+    // If task isDone status changed, update project completion status
+    if (data.isDone !== undefined) {
+      // Get the task to find projectId
+      const q = query(collection(db, "tasks"), where("id", "==", taskId));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const task = snap.docs[0].data() as Task;
+
+        if (data.isDone === true) {
+          // Check if all tasks are done, then mark project as done
+          await ProjectService.checkAndUpdateProjectCompletion(task.projectId);
+        } else {
+          // Task unchecked, so project cannot be done
+          await ProjectService.updateProject(task.projectId, { isDone: false });
+        }
+      }
+    }
   },
 
   async deleteTask(taskId: string) {
@@ -87,5 +107,32 @@ export const TaskService = {
 
     // 4. Return group name
     return group.name;
+  },
+
+  // Realtime listener untuk user tasks
+  subscribeToUserTasks(
+    userId: string,
+    callback: (tasks: Task[]) => void
+  ): Unsubscribe {
+    const q = query(collection(db, "tasks"), where("assignedTo", "==", userId));
+    return onSnapshot(q, (snapshot) => {
+      const tasks = snapshot.docs.map((d) => d.data() as Task);
+      callback(tasks);
+    });
+  },
+
+  // Realtime listener untuk project tasks
+  subscribeToProjectTasks(
+    projectId: string,
+    callback: (tasks: Task[]) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, "tasks"),
+      where("projectId", "==", projectId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const tasks = snapshot.docs.map((d) => d.data() as Task);
+      callback(tasks);
+    });
   },
 };

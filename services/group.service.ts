@@ -6,8 +6,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   setDoc,
+  Unsubscribe,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -78,5 +80,20 @@ export const GroupService = {
   async deleteGroup(groupId: string) {
     const ref = doc(db, "groups", groupId);
     await deleteDoc(ref);
+  },
+
+  // Realtime listener untuk user groups
+  subscribeToUserGroups(
+    userId: string,
+    callback: (groups: Group[]) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, "groups"),
+      where("members", "array-contains", userId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const groups = snapshot.docs.map((d) => d.data() as Group);
+      callback(groups);
+    });
   },
 };

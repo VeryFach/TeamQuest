@@ -18,7 +18,7 @@ interface GoalsChartProps {
 export const GoalsChart: React.FC<GoalsChartProps> = ({ pieData, total }) => (
   <View style={styles.chartCard}>
     <View style={styles.cardHeaderRow}>
-      <Text style={styles.cardTitle}>Goals Achieved</Text>
+      <Text style={styles.cardTitle}>Projects Completed</Text>
       <MaterialCommunityIcons
         name="dots-horizontal"
         size={24}
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     justifyContent: "center",
     alignItems: "center",
-    top: "42%",
+    top: "40%",
     left: "25%",
   },
   donutNumber: { fontSize: 26, fontWeight: "bold", color: COLORS.textDark },
